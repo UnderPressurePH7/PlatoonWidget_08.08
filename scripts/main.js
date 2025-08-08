@@ -32,6 +32,11 @@ export default class SquadWidget {
       this.coreService = new CoreService();
       this.uiService = new UIService(this.coreService);
       this.initialize();
+      
+      // Робимо coreService доступним глобально для тестування
+      window.coreService = this.coreService;
+      console.log('🔧 CoreService доступний глобально як window.coreService');
+      console.log('💡 Для ручного тесту викличте: window.coreService.manualSaveTest()');
     } catch (error) {
       console.error('Error initializing services:', error);
       this.showAccessDenied();
