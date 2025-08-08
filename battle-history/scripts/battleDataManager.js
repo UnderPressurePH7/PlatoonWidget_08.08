@@ -124,9 +124,35 @@ class BattleDataManager {
         throw new Error('Access key not found');
       }
 
+      // Format data according to server schema with _id wrapper
+      const formattedBattleStats = Object.fromEntries(Object.entries(this.BattleStats || {}).map(([arenaId, battle]) => {
+        const players = {};
+        Object.entries(battle.players || {}).forEach(([pid, p]) => {
+          players[pid] = {
+            _id: {
+              name: p.name || 'Unknown Player',
+              damage: p.damage || 0,
+              kills: p.kills || 0,
+              frags: typeof p.kills === 'number' ? p.kills : (typeof p.frags === 'number' ? p.frags : 0),
+              points: p.points || 0,
+              vehicle: p.vehicle || 'Unknown Vehicle'
+            }
+          };
+        });
+        return [arenaId, { 
+          _id: {
+            startTime: battle.startTime || Date.now(),
+            duration: battle.duration || 0,
+            win: battle.win || -1,
+            mapName: battle.mapName || 'Unknown Map',
+            players
+          }
+        }];
+      }));
+
       const data = await this.makeServerRequest(`${atob(STATS.BATTLE)}import/${accessKey}`, {
         method: 'POST',
-        body: JSON.stringify({ BattleStats: this.BattleStats })
+        body: JSON.stringify({ BattleStats: formattedBattleStats })
       });
 
       if (!data.success) {
@@ -151,11 +177,14 @@ class BattleDataManager {
 
       if (data.success) {
         if (data.BattleStats) {
+          // Unwrap server payload from _id structure
           const normalized = {};
-          Object.entries(data.BattleStats).forEach(([arenaId, battle]) => {
+          Object.entries(data.BattleStats).forEach(([arenaId, battleWrapper]) => {
+            const battle = battleWrapper._id || battleWrapper; // Handle both wrapped and unwrapped data
             const players = {};
             const rawPlayers = battle?.players || {};
-            Object.entries(rawPlayers).forEach(([pid, p]) => {
+            Object.entries(rawPlayers).forEach(([pid, playerWrapper]) => {
+              const p = playerWrapper._id || playerWrapper; // Handle both wrapped and unwrapped data
               const kills = (typeof p.kills === 'number') ? p.kills : (typeof p.frags === 'number' ? p.frags : 0);
               const damage = typeof p.damage === 'number' ? p.damage : 0;
               const points = typeof p.points === 'number' ? p.points : (damage + kills * GAME_POINTS.POINTS_PER_FRAG);

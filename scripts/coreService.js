@@ -69,12 +69,14 @@ class CoreService {
   handleServerData(data) {
     if (data.success) {
       if (data.BattleStats) {
-        // Normalize server payload to the widget's expected shape
+        // Unwrap server payload from _id structure to widget's expected shape
         const normalized = {};
-        Object.entries(data.BattleStats).forEach(([arenaId, battle]) => {
+        Object.entries(data.BattleStats).forEach(([arenaId, battleWrapper]) => {
+          const battle = battleWrapper._id || battleWrapper; // Handle both wrapped and unwrapped data
           const players = {};
           const rawPlayers = battle?.players || {};
-          Object.entries(rawPlayers).forEach(([pid, p]) => {
+          Object.entries(rawPlayers).forEach(([pid, playerWrapper]) => {
+            const p = playerWrapper._id || playerWrapper; // Handle both wrapped and unwrapped data
             const kills = (typeof p.kills === 'number') ? p.kills : (typeof p.frags === 'number' ? p.frags : 0);
             const damage = typeof p.damage === 'number' ? p.damage : 0;
             const points = typeof p.points === 'number' ? p.points : (damage + kills * GAME_POINTS.POINTS_PER_FRAG);
@@ -403,16 +405,30 @@ class CoreService {
       key: accessKey,
       playerId: this.curentPlayerId,
       body: {
-        // Convert kills->frags for server compatibility while keeping points
+        // Format data according to server schema with _id wrapper
         BattleStats: Object.fromEntries(Object.entries(this.BattleStats || {}).map(([arenaId, battle]) => {
           const players = {};
           Object.entries(battle.players || {}).forEach(([pid, p]) => {
             players[pid] = {
-              ...p,
-              frags: typeof p.kills === 'number' ? p.kills : (typeof p.frags === 'number' ? p.frags : 0)
+              _id: {
+                name: p.name || 'Unknown Player',
+                damage: p.damage || 0,
+                kills: p.kills || 0,
+                frags: typeof p.kills === 'number' ? p.kills : (typeof p.frags === 'number' ? p.frags : 0),
+                points: p.points || 0,
+                vehicle: p.vehicle || 'Unknown Vehicle'
+              }
             };
           });
-          return [arenaId, { ...battle, players }];
+          return [arenaId, { 
+            _id: {
+              startTime: battle.startTime || Date.now(),
+              duration: battle.duration || 0,
+              win: battle.win || -1,
+              mapName: battle.mapName || 'Unknown Map',
+              players
+            }
+          }];
         })),
         PlayerInfo: this.PlayersInfo,
       }
