@@ -13,11 +13,6 @@ class CoreService {
     this.setupDebouncedMethods();
     this.initializeSocket();
     this.loadFromServer();
-    
-    // Тестуємо Socket.IO через 3 секунди
-    setTimeout(() => {
-      this.testSocketConnection();
-    }, 3000);
   }
 
   initializeSocket() {
@@ -27,10 +22,8 @@ class CoreService {
       return;
     }
     
-    console.log('🔗 Ініціалізація WebSocket з ключем:', accessKey);
-    
     if (typeof io === 'undefined') {
-      console.error('❌ Socket.IO (io) не знайдено! Перевірте чи підключена бібліотека socket.io.js');
+      console.error('Socket.IO library not found!');
       return;
     }
     
@@ -43,16 +36,7 @@ class CoreService {
       });
 
       this.socket.on('connect', () => {
-        console.log('✅ Socket.IO connected');
-        
-        // Тестуємо базове підключення
-        console.log('🔍 Тестуємо базову комунікацію з сервером...');
-        this.socket.emit('ping', { message: 'test' }, (pongResponse) => {
-          console.log('🏓 Ping-pong тест:', pongResponse);
-        });
-        
         this.socket.emit('getStats', { key: accessKey }, (response) => {
-          console.log('📥 Початкові дані від сервера:', response);
           if (response.status === 200) {
             this.handleServerData(response.body);
           } else {
@@ -62,27 +46,26 @@ class CoreService {
       });
 
       this.socket.on('statsUpdated', (data) => {
-        console.log('🔄 Received statsUpdated event:', data);
         this.handleServerData(data);
       });
 
       this.socket.on('disconnect', (reason) => {
-        console.log('❌ Socket.IO disconnected:', reason);
+        console.log('Socket disconnected:', reason);
       });
 
       this.socket.on('connect_error', (error) => {
-        console.error('❌ Socket.IO connection error:', error);
+        console.error('Socket connection error:', error);
       });
 
       this.socket.on('reconnect_failed', () => {
-        console.error('❌ Socket.IO reconnection failed. Switching to REST fallback.');
+        console.error('Socket reconnection failed.');
       });
 
       this.socket.on('error', (error) => {
-        console.error('❌ Socket.IO error:', error);
+        console.error('Socket error:', error);
       });
     } catch (error) {
-      console.error('❌ Помилка ініціалізації WebSocket:', error);
+      console.error('WebSocket initialization error:', error);
     }
   }
 
@@ -190,14 +173,8 @@ class CoreService {
   }
 
   setupDebouncedMethods() {
-    this.serverDataDebounced = Utils.debounce((...args) => {
-      console.log('🔥 serverDataDebounced викликано з args:', args);
-      return this.serverData.bind(this)(...args);
-    }, CONFIG.DEBOUNCE_DELAY);
-    this.serverDataLoadOtherPlayersDebounced = Utils.debounce((...args) => {
-      console.log('🔄 serverDataLoadOtherPlayersDebounced викликано з args:', args);
-      return this.serverDataLoadOtherPlayers.bind(this)(...args);
-    }, CONFIG.DEBOUNCE_DELAY);
+    this.serverDataDebounced = Utils.debounce(this.serverData.bind(this), CONFIG.DEBOUNCE_DELAY);
+    this.serverDataLoadOtherPlayersDebounced = Utils.debounce(this.serverDataLoadOtherPlayers.bind(this), CONFIG.DEBOUNCE_DELAY);
   }
 
   setupSDKListeners() {
@@ -241,7 +218,6 @@ class CoreService {
 
   initializeBattleStats(arenaId, playerId) {
     if (!this.BattleStats[arenaId]) {
-      console.log(`Ініціалізація нової статистики бою для арени ${arenaId}`);
       this.BattleStats[arenaId] = {
         startTime: Date.now(),
         duration: 0,
@@ -252,7 +228,6 @@ class CoreService {
     }
 
     if (!this.BattleStats[arenaId].players[playerId]) {
-      console.log(`Ініціалізація статистики гравця ${playerId} для арени ${arenaId}`);
       this.BattleStats[arenaId].players[playerId] = {
         name: this.PlayersInfo[playerId] || 'Unknown Player',
         damage: 0,
@@ -443,107 +418,12 @@ class CoreService {
     return StateManager.getAccessKey();
   }
 
-  testSocketConnection() {
-    console.log('🧪 Тестуємо Socket.IO підключення...');
-    console.log('Socket існує:', !!this.socket);
-    console.log('Socket підключений:', this.socket?.connected);
-    console.log('Access key:', this.getAccessKey());
-    
-    if (this.socket && this.socket.connected) {
-      console.log('✅ WebSocket активний, тестуємо відправку даних...');
-      
-      // Створюємо тестові дані
-      const testData = {
-        key: this.getAccessKey(),
-        playerId: 'test123',
-        body: {
-          BattleStats: {
-            'test-arena': {
-              _id: {
-                startTime: Date.now(),
-                duration: 0,
-                win: -1,
-                mapName: 'Test Map',
-                players: {
-                  'test123': {
-                    _id: {
-                      name: 'Test Player',
-                      damage: 100,
-                      kills: 1,
-                      frags: 1,
-                      points: 500,
-                      vehicle: 'Test Vehicle'
-                    }
-                  }
-                }
-              }
-            }
-          },
-          PlayerInfo: {'test123': 'Test Player'}
-        }
-      };
-      
-      console.log('📤 Відправляємо тестові дані:', testData);
-      
-      // Створюємо таймаут для callback
-      let callbackReceived = false;
-      
-      this.socket.emit('updateStats', testData, (response) => {
-        callbackReceived = true;
-        console.log('📨 Тестова відповідь від сервера:', response);
-      });
-      
-      // Перевіряємо чи прийшла відповідь через 5 секунд
-      setTimeout(() => {
-        if (!callbackReceived) {
-          console.error('⚠️ Callback від сервера не отримано за 5 секунд!');
-          console.log('❓ Можливі причини:');
-          console.log('  - Сервер не обробляє updateStats події');
-          console.log('  - Сервер не викликає callback функцію');
-          console.log('  - Проблема з мережею або таймаутом');
-        }
-      }, 5000);
-    } else {
-      console.log('❌ WebSocket не підключений, перевіряємо причини...');
-      if (!this.socket) {
-        console.log('- Socket не створений');
-      }
-      if (this.socket && !this.socket.connected) {
-        console.log('- Socket створений але не підключений');
-        console.log('- Стан socket:', this.socket.readyState);
-      }
-    }
-  }
-
-  // Функція для ручного тестування з консолі браузера
-  manualSaveTest() {
-    console.log('🔧 Ручне тестування збереження...');
-    
-    // Створюємо мінімальні тестові дані
-    this.curentArenaId = 'manual-test-' + Date.now();
-    this.curentPlayerId = this.sdk.data.player.id.value;
-    
-    this.initializeBattleStats(this.curentArenaId, this.curentPlayerId);
-    this.BattleStats[this.curentArenaId].players[this.curentPlayerId].damage = 999;
-    this.BattleStats[this.curentArenaId].players[this.curentPlayerId].kills = 2;
-    this.BattleStats[this.curentArenaId].players[this.curentPlayerId].points = 1799;
-    
-    console.log('📊 Створені тестові дані:', this.BattleStats[this.curentArenaId]);
-    
-    this.saveToServer();
-  }
-
   async saveToServer(retries = CONFIG.RETRY_ATTEMPTS) {
     const accessKey = this.getAccessKey();
     if (!accessKey) {
       console.error('Access key not found.');
       return;
     }
-
-    console.log('Збереження даних на сервер:', {
-      BattleStats: Object.keys(this.BattleStats).length,
-      PlayerInfo: Object.keys(this.PlayersInfo).length
-    });
 
     const dataToSend = {
       key: accessKey,
@@ -578,45 +458,36 @@ class CoreService {
       }
     };
     
-    console.log('Дані для відправки:', JSON.stringify(dataToSend, null, 2));
-    
+    // Try WebSocket first with timeout fallback to REST
     if (this.socket && this.socket.connected) {
-      console.log('📡 Відправка через WebSocket:', {
-        event: 'updateStats',
-        key: accessKey,
-        playerId: this.curentPlayerId,
-        battleStatsCount: Object.keys(dataToSend.body.BattleStats).length
-      });
-      
-      // Додаємо таймаут для відстеження callback
       let saveCallbackReceived = false;
+      let fallbackUsed = false;
       
       this.socket.emit('updateStats', dataToSend, (response) => {
-        saveCallbackReceived = true;
-        console.log('📨 Отримано відповідь від WebSocket:', response);
-        if (response.status !== 202) {
-          console.error('Error updating stats:', response.body?.message || 'Unknown error');
-        } else {
-          console.log('✅ Дані успішно збережені через WebSocket');
+        if (!fallbackUsed) {
+          saveCallbackReceived = true;
+          if (response.status !== 202) {
+            console.error('Error updating stats:', response.body?.message || 'Unknown error');
+          }
         }
       });
       
-      // Перевіряємо callback через 10 секунд  
-      setTimeout(() => {
-        if (!saveCallbackReceived) {
-          console.error('⚠️ КРИТИЧНО: Callback збереження не отримано!');
-          console.log('🔍 Дані які відправлялись:', {
-            battleCount: Object.keys(dataToSend.body.BattleStats).length,
-            playerCount: Object.keys(dataToSend.body.PlayerInfo).length,
-            arenaIds: Object.keys(dataToSend.body.BattleStats)
-          });
+      // Fallback to REST if no response in 3 seconds
+      setTimeout(async () => {
+        if (!saveCallbackReceived && !fallbackUsed) {
+          fallbackUsed = true;
+          await this.saveViaREST(dataToSend.body, accessKey);
         }
-      }, 10000);
+      }, 3000);
       
       return;
     }
 
-    // REST fallback
+    // Direct REST if WebSocket unavailable
+    await this.saveViaREST(dataToSend.body, accessKey);
+  }
+
+  async saveViaREST(data, accessKey) {
     try {
       const url = `${atob(STATS.BATTLE)}${accessKey}`;
       const response = await fetch(url, {
@@ -625,16 +496,18 @@ class CoreService {
           'Content-Type': 'application/json',
           'X-Player-ID': this.curentPlayerId || ''
         },
-        body: JSON.stringify(dataToSend.body)
+        body: JSON.stringify(data)
       });
       
       if (response.ok) {
-        console.log('Дані успішно збережені через REST API');
+        return true;
       } else {
-        console.error('REST fallback update failed:', response.status);
+        console.error('REST API error:', response.status, response.statusText);
+        return false;
       }
     } catch (e) {
-      console.error('REST fallback update failed:', e);
+      console.error('REST API exception:', e);
+      return false;
     }
   }
 
@@ -753,13 +626,6 @@ class CoreService {
 
   async serverData() {
     try {
-      console.log('🚀 serverData викликано', {
-        arenaId: this.curentArenaId,
-        playerId: this.curentPlayerId,
-        battleCount: Object.keys(this.BattleStats).length,
-        socketConnected: this.socket?.connected
-      });
-      
       const oldStats = JSON.stringify(this.BattleStats);
       await this.saveToServer();
       if (this.isDataChanged(this.BattleStats, JSON.parse(oldStats))) {
@@ -807,8 +673,6 @@ class CoreService {
 
     if (this.curentArenaId == null) return;
     if (this.curentPlayerId == null) return;
-
-    console.log(`Обробка арени: ${this.curentArenaId}, гравець: ${this.curentPlayerId}`);
 
     // Завжди ініціалізуємо статистику бою для поточного гравця
     this.initializeBattleStats(this.curentArenaId, this.curentPlayerId);
@@ -881,8 +745,6 @@ class CoreService {
   handlePlayerDamage(damageData) {
     if (!damageData || !this.isValidBattleState()) return;
 
-    console.log('💥 Отримано пошкодження:', damageData);
-
     const arenaId = this.curentArenaId;
     const playerId = this.curentPlayerId;
     
@@ -892,16 +754,12 @@ class CoreService {
     this.BattleStats[arenaId].players[playerId].damage += damageData.damage;
     this.BattleStats[arenaId].players[playerId].points += damageData.damage * GAME_POINTS.POINTS_PER_DAMAGE;
     
-    console.log('📊 Оновлена статистика після пошкодження:', this.BattleStats[arenaId].players[playerId]);
-    
     this.clearCalculationCache();
     this.serverDataDebounced();
   }
 
   handlePlayerKill(killData) {
     if (!killData || !this.isValidBattleState()) return;
-
-    console.log('🎯 Отримано вбивство:', killData);
 
     const arenaId = this.curentArenaId;
     const playerId = this.curentPlayerId;
@@ -911,8 +769,6 @@ class CoreService {
     
     this.BattleStats[arenaId].players[playerId].kills += 1;
     this.BattleStats[arenaId].players[playerId].points += GAME_POINTS.POINTS_PER_FRAG;
-    
-    console.log('📊 Оновлена статистика після вбивства:', this.BattleStats[arenaId].players[playerId]);
     
     this.clearCalculationCache();
     this.serverDataDebounced();
