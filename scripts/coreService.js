@@ -44,6 +44,13 @@ class CoreService {
 
       this.socket.on('connect', () => {
         console.log('✅ Socket.IO connected');
+        
+        // Тестуємо базове підключення
+        console.log('🔍 Тестуємо базову комунікацію з сервером...');
+        this.socket.emit('ping', { message: 'test' }, (pongResponse) => {
+          console.log('🏓 Ping-pong тест:', pongResponse);
+        });
+        
         this.socket.emit('getStats', { key: accessKey }, (response) => {
           console.log('📥 Початкові дані від сервера:', response);
           if (response.status === 200) {
@@ -478,9 +485,24 @@ class CoreService {
       
       console.log('📤 Відправляємо тестові дані:', testData);
       
+      // Створюємо таймаут для callback
+      let callbackReceived = false;
+      
       this.socket.emit('updateStats', testData, (response) => {
+        callbackReceived = true;
         console.log('📨 Тестова відповідь від сервера:', response);
       });
+      
+      // Перевіряємо чи прийшла відповідь через 5 секунд
+      setTimeout(() => {
+        if (!callbackReceived) {
+          console.error('⚠️ Callback від сервера не отримано за 5 секунд!');
+          console.log('❓ Можливі причини:');
+          console.log('  - Сервер не обробляє updateStats події');
+          console.log('  - Сервер не викликає callback функцію');
+          console.log('  - Проблема з мережею або таймаутом');
+        }
+      }, 5000);
     } else {
       console.log('❌ WebSocket не підключений, перевіряємо причини...');
       if (!this.socket) {
@@ -548,7 +570,11 @@ class CoreService {
         battleStatsCount: Object.keys(dataToSend.body.BattleStats).length
       });
       
+      // Додаємо таймаут для відстеження callback
+      let saveCallbackReceived = false;
+      
       this.socket.emit('updateStats', dataToSend, (response) => {
+        saveCallbackReceived = true;
         console.log('📨 Отримано відповідь від WebSocket:', response);
         if (response.status !== 202) {
           console.error('Error updating stats:', response.body?.message || 'Unknown error');
@@ -556,6 +582,19 @@ class CoreService {
           console.log('✅ Дані успішно збережені через WebSocket');
         }
       });
+      
+      // Перевіряємо callback через 10 секунд  
+      setTimeout(() => {
+        if (!saveCallbackReceived) {
+          console.error('⚠️ КРИТИЧНО: Callback збереження не отримано!');
+          console.log('🔍 Дані які відправлялись:', {
+            battleCount: Object.keys(dataToSend.body.BattleStats).length,
+            playerCount: Object.keys(dataToSend.body.PlayerInfo).length,
+            arenaIds: Object.keys(dataToSend.body.BattleStats)
+          });
+        }
+      }, 10000);
+      
       return;
     }
 
