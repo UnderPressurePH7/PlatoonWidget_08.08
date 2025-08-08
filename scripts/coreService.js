@@ -515,6 +515,24 @@ class CoreService {
     }
   }
 
+  // Функція для ручного тестування з консолі браузера
+  manualSaveTest() {
+    console.log('🔧 Ручне тестування збереження...');
+    
+    // Створюємо мінімальні тестові дані
+    this.curentArenaId = 'manual-test-' + Date.now();
+    this.curentPlayerId = this.sdk.data.player.id.value;
+    
+    this.initializeBattleStats(this.curentArenaId, this.curentPlayerId);
+    this.BattleStats[this.curentArenaId].players[this.curentPlayerId].damage = 999;
+    this.BattleStats[this.curentArenaId].players[this.curentPlayerId].kills = 2;
+    this.BattleStats[this.curentArenaId].players[this.curentPlayerId].points = 1799;
+    
+    console.log('📊 Створені тестові дані:', this.BattleStats[this.curentArenaId]);
+    
+    this.saveToServer();
+  }
+
   async saveToServer(retries = CONFIG.RETRY_ATTEMPTS) {
     const accessKey = this.getAccessKey();
     if (!accessKey) {
