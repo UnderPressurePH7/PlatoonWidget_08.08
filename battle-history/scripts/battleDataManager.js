@@ -150,7 +150,33 @@ class BattleDataManager {
       const data = await this.makeServerRequest(`${atob(STATS.BATTLE)}${accessKey}`);
 
       if (data.success) {
-        if (data.BattleStats) this.BattleStats = data.BattleStats;
+        if (data.BattleStats) {
+          const normalized = {};
+          Object.entries(data.BattleStats).forEach(([arenaId, battle]) => {
+            const players = {};
+            const rawPlayers = battle?.players || {};
+            Object.entries(rawPlayers).forEach(([pid, p]) => {
+              const kills = (typeof p.kills === 'number') ? p.kills : (typeof p.frags === 'number' ? p.frags : 0);
+              const damage = typeof p.damage === 'number' ? p.damage : 0;
+              const points = typeof p.points === 'number' ? p.points : (damage + kills * GAME_POINTS.POINTS_PER_FRAG);
+              players[pid] = {
+                name: p.name || this.PlayersInfo?.[pid] || 'Unknown Player',
+                damage,
+                kills,
+                points,
+                vehicle: p.vehicle || 'Unknown Vehicle'
+              };
+            });
+            normalized[arenaId] = {
+              startTime: battle.startTime || Date.now(),
+              duration: battle.duration ?? 0,
+              win: typeof battle.win === 'number' ? battle.win : -1,
+              mapName: battle.mapName || 'Unknown Map',
+              players
+            };
+          });
+          this.BattleStats = normalized;
+        }
         if (data.PlayerInfo) this.PlayersInfo = data.PlayerInfo;
       }
 
@@ -168,7 +194,7 @@ class BattleDataManager {
         throw new Error('Access key not found');
       }
       
-      await this.makeServerRequest(`${atob(STATS.BATTLE)}${accessKey}\\${battleId}`, {
+  await this.makeServerRequest(`${atob(STATS.BATTLE)}${accessKey}/${battleId}`, {
         method: 'DELETE'
       });
 

@@ -13,7 +13,7 @@ export default class SquadWidget {
 
   async init() {
     try {
-      const hasAccess = await this.checkAccessKey();
+  const hasAccess = await this.checkAccessKey();
       
       if (!hasAccess) {
         this.showAccessDenied();
@@ -55,14 +55,12 @@ export default class SquadWidget {
 
   async checkAccessKey() {
     try {
-      localStorage.removeItem('accessKey');
-      const urlParams = window.location.search.substring(1);
-      
-      if (!urlParams) {
-        return false;
-      }
-  
-      const apiUrl = `${atob(STATS.BATTLE)}${urlParams}`;
+      const urlKey = window.location.search.substring(1);
+      const storedKey = localStorage.getItem('accessKey');
+      const keyToTest = urlKey || storedKey;
+      if (!keyToTest) return false;
+
+      const apiUrl = `${atob(STATS.BATTLE)}${keyToTest}`;
       
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -82,7 +80,9 @@ export default class SquadWidget {
       const data = await response.json();
   
       if (data.success) {
-        localStorage.setItem('accessKey', urlParams);
+        if (urlKey) {
+          localStorage.setItem('accessKey', urlKey);
+        }
         return true;
       }
       
@@ -157,5 +157,3 @@ export default class SquadWidget {
     }
   }
 }
-
-new SquadWidget();

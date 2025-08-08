@@ -48,14 +48,12 @@ class MainHistory {
 
     async checkAccessKey() {
         try {
-          localStorage.removeItem('accessKey');
-          const urlParams = window.location.search.substring(1);
-          
-          if (!urlParams) {
-            return false;
-          }
-      
-          const apiUrl = `${atob(STATS.BATTLE)}${urlParams}`;
+          const urlKey = window.location.search.substring(1);
+          const storedKey = localStorage.getItem('accessKey');
+          const keyToTest = urlKey || storedKey;
+          if (!keyToTest) return false;
+
+          const apiUrl = `${atob(STATS.BATTLE)}${keyToTest}`;
       
           const response = await fetch(apiUrl, {
             method: 'GET',
@@ -74,8 +72,10 @@ class MainHistory {
       
           const data = await response.json();
       
-          if (data.success) {
-            localStorage.setItem('accessKey', urlParams);
+                    if (data.success) {
+                        if (urlKey) {
+                            localStorage.setItem('accessKey', urlKey);
+                        }
             return true;
           }
           

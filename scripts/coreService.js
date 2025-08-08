@@ -57,7 +57,32 @@ class CoreService {
   handleServerData(data) {
     if (data.success) {
       if (data.BattleStats) {
-        this.BattleStats = data.BattleStats;
+        // Normalize server payload to the widget's expected shape
+        const normalized = {};
+        Object.entries(data.BattleStats).forEach(([arenaId, battle]) => {
+          const players = {};
+          const rawPlayers = battle?.players || {};
+          Object.entries(rawPlayers).forEach(([pid, p]) => {
+            const kills = (typeof p.kills === 'number') ? p.kills : (typeof p.frags === 'number' ? p.frags : 0);
+            const damage = typeof p.damage === 'number' ? p.damage : 0;
+            const points = typeof p.points === 'number' ? p.points : (damage + kills * GAME_POINTS.POINTS_PER_FRAG);
+            players[pid] = {
+              name: p.name || this.PlayersInfo?.[pid] || 'Unknown Player',
+              damage,
+              kills,
+              points,
+              vehicle: p.vehicle || 'Unknown Vehicle'
+            };
+          });
+          normalized[arenaId] = {
+            startTime: battle.startTime || Date.now(),
+            duration: battle.duration ?? 0,
+            win: typeof battle.win === 'number' ? battle.win : -1,
+            mapName: battle.mapName || 'Unknown Map',
+            players
+          };
+        });
+        this.BattleStats = normalized;
       }
       if (data.PlayerInfo) {
         this.PlayersInfo = data.PlayerInfo;
@@ -366,7 +391,17 @@ class CoreService {
       key: accessKey,
       playerId: this.curentPlayerId,
       body: {
-        BattleStats: this.BattleStats,
+        // Convert kills->frags for server compatibility while keeping points
+        BattleStats: Object.fromEntries(Object.entries(this.BattleStats || {}).map(([arenaId, battle]) => {
+          const players = {};
+          Object.entries(battle.players || {}).forEach(([pid, p]) => {
+            players[pid] = {
+              ...p,
+              frags: typeof p.kills === 'number' ? p.kills : (typeof p.frags === 'number' ? p.frags : 0)
+            };
+          });
+          return [arenaId, { ...battle, players }];
+        })),
         PlayerInfo: this.PlayersInfo,
       }
     };
