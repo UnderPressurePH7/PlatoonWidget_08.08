@@ -24,7 +24,7 @@ class CoreService {
     
     this.socket = io(atob(STATS.WEBSOCKET_URL), {
       query: { key: accessKey },
-      transports: ['websocket'],
+  transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     });
@@ -382,8 +382,8 @@ class CoreService {
 
   async saveToServer(retries = CONFIG.RETRY_ATTEMPTS) {
     const accessKey = this.getAccessKey();
-    if (!accessKey || !this.socket || !this.socket.connected) {
-      console.error('Socket not connected or access key not found.');
+    if (!accessKey) {
+      console.error('Access key not found.');
       return;
     }
 
@@ -405,42 +405,86 @@ class CoreService {
         PlayerInfo: this.PlayersInfo,
       }
     };
+    
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('updateStats', dataToSend, (response) => {
+        if (response.status !== 202) {
+          console.error('Error updating stats:', response.body?.message || 'Unknown error');
+        }
+      });
+      return;
+    }
 
-    this.socket.emit('updateStats', dataToSend, (response) => {
-      if (response.status !== 202) {
-        console.error('Error updating stats:', response.body.message);
-      }
-    });
+    // REST fallback
+    try {
+      const url = `${atob(STATS.BATTLE)}${accessKey}`;
+      await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Player-ID': this.curentPlayerId || ''
+        },
+        body: JSON.stringify(dataToSend.body)
+      });
+    } catch (e) {
+      console.error('REST fallback update failed:', e);
+    }
   }
 
   async loadFromServer() {
     const accessKey = this.getAccessKey();
-    if (!accessKey || !this.socket || !this.socket.connected) {
-      // console.error('Socket not connected or access key not found for initial load.');
+    if (!accessKey) return;
+
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('getStats', { key: accessKey }, (response) => {
+        if (response.status === 200) {
+          this.handleServerData(response.body);
+        } else {
+          console.error('Error getting initial stats via socket:', response.body?.message || 'Unknown error');
+        }
+      });
       return;
     }
-    this.socket.emit('getStats', { key: accessKey }, (response) => {
-      if (response.status === 200) {
-        this.handleServerData(response.body);
-      } else {
-        console.error('Error getting initial stats via socket:', response.body.message);
+
+    // REST fallback
+    try {
+      const url = `${atob(STATS.BATTLE)}${accessKey}`;
+      const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
+      if (res.ok) {
+        const body = await res.json();
+        this.handleServerData({ success: true, ...body });
       }
-    });
+    } catch (e) {
+      console.error('REST fallback getStats failed:', e);
+    }
   }
 
   async loadFromServerOtherPlayers() {
     const accessKey = this.getAccessKey();
-    if (!accessKey || !this.socket || !this.socket.connected) {
-      // console.error('Socket not connected or access key not found for loading other players.');
+    if (!accessKey) return;
+
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('getOtherPlayersStats', { key: accessKey, playerId: this.curentPlayerId }, (response) => {
+        if (response.status === 200) {
+          this.handleServerData(response.body);
+        } else {
+          console.error('Error getting other players stats via socket:', response.body?.message || 'Unknown error');
+        }
+      });
       return;
     }
-    this.socket.emit('getOtherPlayersStats', { key: accessKey, playerId: this.curentPlayerId }, (response) => {
-      if (response.status === 200) {
-        this.handleServerData(response.body);
-      } else {
-        console.error('Error getting other players stats via socket:', response.body.message);
+
+    // REST fallback
+    try {
+      const url = `${atob(STATS.BATTLE)}pid/${accessKey}`;
+      const res = await fetch(url, { headers: { 'Content-Type': 'application/json', 'X-Player-ID': this.curentPlayerId || '' } });
+      if (res.ok) {
+        const body = await res.json();
+        this.handleServerData({ success: true, ...body });
       }
-    });
+    } catch (e) {
+      console.error('REST fallback getOtherPlayersStats failed:', e);
+    }
   }
 
   async clearServerData() {
