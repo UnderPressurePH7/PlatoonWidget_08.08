@@ -56,13 +56,12 @@ export default class SquadWidget {
   async checkAccessKey() {
     try {
       localStorage.removeItem('accessKey');
-      const urlParams = window.location.search.substring(1);
-      
-      if (!urlParams) {
-        return false;
-      }
-      const apiUrl = `${atob(STATS.BATTLE)}${urlParams}`;
+      const urlKey = window.location.search.substring(1);
+      const keyToTest = urlKey;
+      if (!keyToTest) return false;
 
+      const apiUrl = `${atob(STATS.BATTLE)}${keyToTest}`;
+      
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
