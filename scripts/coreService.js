@@ -468,9 +468,6 @@ class CoreService {
   async serverData() {
     try {
       await this.saveToServer();
-      await Utils.sleep(250);
-      await this.loadFromServerOtherPlayers();
-      await Utils.sleep(CONFIG.UI_UPDATE_DELAY);
       this.eventsCore.emit('statsUpdated');
       this.saveState();
     } catch (error) {
