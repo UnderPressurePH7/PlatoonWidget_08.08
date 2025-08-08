@@ -211,6 +211,7 @@ class CoreService {
 
   initializeBattleStats(arenaId, playerId) {
     if (!this.BattleStats[arenaId]) {
+      console.log(`Ініціалізація нової статистики бою для арени ${arenaId}`);
       this.BattleStats[arenaId] = {
         startTime: Date.now(),
         duration: 0,
@@ -221,6 +222,7 @@ class CoreService {
     }
 
     if (!this.BattleStats[arenaId].players[playerId]) {
+      console.log(`Ініціалізація статистики гравця ${playerId} для арени ${arenaId}`);
       this.BattleStats[arenaId].players[playerId] = {
         name: this.PlayersInfo[playerId] || 'Unknown Player',
         damage: 0,
@@ -418,6 +420,11 @@ class CoreService {
       return;
     }
 
+    console.log('Збереження даних на сервер:', {
+      BattleStats: Object.keys(this.BattleStats).length,
+      PlayerInfo: Object.keys(this.PlayersInfo).length
+    });
+
     const dataToSend = {
       key: accessKey,
       playerId: this.curentPlayerId,
@@ -451,10 +458,14 @@ class CoreService {
       }
     };
     
+    console.log('Дані для відправки:', JSON.stringify(dataToSend, null, 2));
+    
     if (this.socket && this.socket.connected) {
       this.socket.emit('updateStats', dataToSend, (response) => {
         if (response.status !== 202) {
           console.error('Error updating stats:', response.body?.message || 'Unknown error');
+        } else {
+          console.log('Дані успішно збережені через WebSocket');
         }
       });
       return;
@@ -463,7 +474,7 @@ class CoreService {
     // REST fallback
     try {
       const url = `${atob(STATS.BATTLE)}${accessKey}`;
-      await fetch(url, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -471,6 +482,12 @@ class CoreService {
         },
         body: JSON.stringify(dataToSend.body)
       });
+      
+      if (response.ok) {
+        console.log('Дані успішно збережені через REST API');
+      } else {
+        console.error('REST fallback update failed:', response.status);
+      }
     } catch (e) {
       console.error('REST fallback update failed:', e);
     }
@@ -639,31 +656,35 @@ class CoreService {
     if (this.curentArenaId == null) return;
     if (this.curentPlayerId == null) return;
 
+    console.log(`Обробка арени: ${this.curentArenaId}, гравець: ${this.curentPlayerId}`);
+
+    // Завжди ініціалізуємо статистику бою для поточного гравця
+    this.initializeBattleStats(this.curentArenaId, this.curentPlayerId);
+
+    this.BattleStats[this.curentArenaId].mapName = arenaData.localizedName || 'Unknown Map';
+    this.BattleStats[this.curentArenaId].players[this.curentPlayerId].vehicle = this.curentVehicle;
+    this.BattleStats[this.curentArenaId].players[this.curentPlayerId].name = this.sdk.data.player.name.value;
+
+    // Додаємо гравця до PlayersInfo якщо його там немає
+    if (!this.PlayersInfo[this.curentPlayerId]) {
+      this.PlayersInfo[this.curentPlayerId] = this.sdk.data.player.name.value;
+    }
+
     if (this.isExistsPlayerRecord()) {
       this.serverDataLoadOtherPlayersDebounced();
-      
-      this.initializeBattleStats(this.curentArenaId, this.curentPlayerId);
-
-      this.BattleStats[this.curentArenaId].mapName = arenaData.localizedName || 'Unknown Map';
-      this.BattleStats[this.curentArenaId].players[this.curentPlayerId].vehicle = this.curentVehicle;
-      this.BattleStats[this.curentArenaId].players[this.curentPlayerId].name = this.sdk.data.player.name.value;
-
-      this.serverDataDebounced();
     }
+
+    this.serverDataDebounced();
   }
    
   async handleisInBattle(isInBattle) {
     this.isInBattle = isInBattle;
-    if (!this.isInPlatoon && this.isInBattle) {
-      return;
-    }
-    await Utils.getRandomDelay()
+    await Utils.getRandomDelay();
     // await this.refreshLocalData(); // TESTING
   }
 
   handlePeriod(period) {
     if (!period || !this.isValidBattleState()) return;
-    if (!this.isInPlatoon) return;
 
     if (period.tag == "PREBATTLE") {
       this.lastUpdateTime = Date.now();
@@ -681,7 +702,6 @@ class CoreService {
 
   handlePlayerFeedback(feedback) {
     if (!feedback || !feedback.type) return;
-    if (!this.isInPlatoon) return;
 
     const handlers = {
       'damage': this.handlePlayerDamage.bind(this),
@@ -712,12 +732,13 @@ class CoreService {
     const arenaId = this.curentArenaId;
     const playerId = this.curentPlayerId;
     
-    if (this.isExistsPlayerRecord()) {
-      this.BattleStats[arenaId].players[playerId].damage += damageData.damage;
-      this.BattleStats[arenaId].players[playerId].points += damageData.damage * GAME_POINTS.POINTS_PER_DAMAGE;
-      this.clearCalculationCache();
-      this.serverDataDebounced();
-    }
+    // Ініціалізуємо статистику якщо її немає
+    this.initializeBattleStats(arenaId, playerId);
+    
+    this.BattleStats[arenaId].players[playerId].damage += damageData.damage;
+    this.BattleStats[arenaId].players[playerId].points += damageData.damage * GAME_POINTS.POINTS_PER_DAMAGE;
+    this.clearCalculationCache();
+    this.serverDataDebounced();
   }
 
   handlePlayerKill(killData) {
@@ -726,12 +747,13 @@ class CoreService {
     const arenaId = this.curentArenaId;
     const playerId = this.curentPlayerId;
     
-    if (this.isExistsPlayerRecord()) {
-      this.BattleStats[arenaId].players[playerId].kills += 1;
-      this.BattleStats[arenaId].players[playerId].points += GAME_POINTS.POINTS_PER_FRAG;
-      this.clearCalculationCache();
-      this.serverDataDebounced();
-    }
+    // Ініціалізуємо статистику якщо її немає
+    this.initializeBattleStats(arenaId, playerId);
+    
+    this.BattleStats[arenaId].players[playerId].kills += 1;
+    this.BattleStats[arenaId].players[playerId].points += GAME_POINTS.POINTS_PER_FRAG;
+    this.clearCalculationCache();
+    this.serverDataDebounced();
   }
 
   async handleBattleResult(result) {
@@ -744,6 +766,10 @@ class CoreService {
     if (!arenaId) return;
 
     this.curentPlayerId = result.personal.avatar.accountDBID;
+    
+    // Ініціалізуємо статистику якщо її немає
+    this.initializeBattleStats(arenaId, this.curentPlayerId);
+    
     this.BattleStats[arenaId].duration = result.common.duration;
 
     const playerTeam = Number(result.players[this.curentPlayerId].team);
@@ -775,9 +801,7 @@ class CoreService {
     this.clearCalculationCache();
     await Utils.getRandomDelay();
     
-    if (this.isExistsPlayerRecord()) {
-      this.serverDataDebounced();
-    }
+    this.serverDataDebounced();
   }
 }
 
