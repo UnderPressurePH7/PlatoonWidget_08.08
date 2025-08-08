@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Історія боїв</title>
+    <link href="./styles/history.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>Історія боїв</h1>
+        
+        <!-- Головне меню вкладок -->
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="battles">Історія боїв</button>
+                <button class="tab-btn" data-tab="summary">Загальна статистика</button>
+                <button class="tab-btn" data-tab="players">Статистика гравців</button>
+                <button class="tab-btn" data-tab="vehicles">Статистика техніки</button>
+            </div>
+
+            <div class="filters-actions">
+                <div class="button-group">
+                    <button id="export-data">Експорт даних</button>
+                    <button id="import-data">Імпорт даних</button>
+                </div>
+            </div>
+        </div>
+		
+		<!-- Вкладка: Історія боїв -->
+        <div class="tab-content active" id="battles-tab">
+            <div class="filters">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="map-filter">Мапа:</label>
+                        <select id="map-filter">
+                            <option value="">Всі мапи</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="vehicle-filter">Танк:</label>
+                        <select id="vehicle-filter">
+                            <option value="">Всі танки</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="result-filter">Результат:</label>
+                        <select id="result-filter">
+                            <option value="">Всі результати</option>
+                            <option value="victory">Перемога</option>
+                            <option value="draw">Нічия</option>
+                            <option value="defeat">Поразка</option>
+                            <option value="inBattle">В бою</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="date-filter">Дата:</label>
+                        <input type="date" id="date-filter">
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="player-filter">Гравець:</label>
+                        <select id="player-filter">
+                            <option value="">Всі гравці</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-actions">
+                    <button id="apply-filters">Застосувати фільтри</button>
+                    <button id="clear-filters">Очистити фільтри</button>
+                </div>
+            </div>
+
+            <div class="battle-table-container">
+                <div class="column-selector">
+                    <button id="toggle-columns">Налаштувати колонки <i class="fas fa-cog"></i></button>
+                    <div class="column-dropdown" id="column-dropdown">
+                        <div><input type="checkbox" id="col-date" checked><label for="col-date">Дата</label></div>
+                        <div><input type="checkbox" id="col-map" checked><label for="col-map">Мапа</label></div>
+                        <div><input type="checkbox" id="col-result" checked><label for="col-result">Результат</label></div>
+                        <div><input type="checkbox" id="col-player" checked><label for="col-player">Гравець</label></div>
+                        <div><input type="checkbox" id="col-vehicle" checked><label for="col-vehicle">Танк</label></div>
+                        <div><input type="checkbox" id="col-damage" checked><label for="col-damage">Шкода</label></div>
+                        <div><input type="checkbox" id="col-frags" checked><label for="col-frags">Фраги</label></div>
+                        <div><input type="checkbox" id="col-points" checked><label for="col-points">Очки</label></div>
+                        <div><input type="checkbox" id="col-total" checked><label for="col-total">Загальні очки</label></div>
+                    </div>
+                </div>
+                <table class="battle-table">
+                    <thead>
+                        <tr>
+                            <th class="col-date">Дата</th>
+                            <th class="col-map">Мапа</th>
+                            <th class="col-result">Результат</th>
+                            <th class="col-player">Гравець</th>
+                            <th class="col-vehicle">Танк</th>
+                            <th class="col-damage">Шкода</th>
+                            <th class="col-frags">Фраги</th>
+                            <th class="col-points">Очки</th>
+                            <th class="col-total">Загальні очки</th>
+                            <th>Дії</th>
+                        </tr>
+                    </thead>
+                    <tbody id="battle-table-body">
+                        <!-- Дані будуть додані динамічно -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination" id="pagination">
+                <!-- Пагінація буде додана динамічно -->
+            </div>
+        </div>
+		
+        <!-- Вкладка: Загальна статистика -->
+        <div class="tab-content" id="summary-tab">
+            <div class="summary-stats">
+                <div class="stats-header">
+                    <h2>Загальна статистика</h2>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-title">Всього боїв</div>
+                        <div class="stat-value" id="total-battles">0</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-title">Перемоги</div>
+                        <div class="stat-value wins" id="total-victories">0</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-title">Відсоток перемог</div>
+                        <div class="stat-value" id="win-rate">0%</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-title">Загальна шкода</div>
+                        <div class="stat-value damage" id="total-damage">0</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-title">Середня шкода</div>
+                        <div class="stat-value damage" id="avg-damage">0</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-title">Всього фрагів</div>
+                        <div class="stat-value frags" id="total-frags">0</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-title">Середні фраги</div>
+                        <div class="stat-value frags" id="avg-frags">0</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-title">Всього очок</div>
+                        <div class="stat-value total-points" id="total-points">0</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-wrapper">
+                        <canvas id="performance-chart"></canvas>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="win-rate-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладка: Статистика гравців -->
+        <div class="tab-content" id="players-tab">
+            <div class="player-stats-container">
+                <div class="stats-header">
+                    <h2>Статистика гравців</h2>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-wrapper">
+                        <canvas id="simple-player-chart"></canvas>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="player-winrate-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="players-table-container">
+                    <table class="players-table">
+                        <thead>
+                            <tr>
+                                <th>№</th>
+                                <th>Гравець</th>
+                                <th>Бої</th>
+                                <th>Перемоги</th>
+                                <th>% перемог</th>
+                                <th>Загальна шкода</th>
+                                <th>Середня шкода</th>
+                                <th>Всього фрагів</th>
+                                <th>Середні фраги</th>
+                            </tr>
+                        </thead>
+                        <tbody id="players-table-body">
+                            <!-- Дані будуть додані динамічно -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладка: Статистика техніки -->
+        <div class="tab-content" id="vehicles-tab">
+            <div class="vehicle-stats-container">
+                <div class="stats-header">
+                    <h2>Статистика техніки</h2>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-wrapper">
+                        <canvas id="simple-vehicle-chart"></canvas>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="vehicle-winrate-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="vehicles-table-container">
+                    <table class="vehicles-table">
+                        <thead>
+                            <tr>
+                                <th>№</th>
+                                <th>Танк</th>
+                                <th>Бої</th>
+                                <th>Перемоги</th>
+                                <th>% перемог</th>
+                                <th>Загальна шкода</th>
+                                <th>Середня шкода</th>
+                                <th>Всього фрагів</th>
+                                <th>Середні фраги</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vehicles-table-body">
+                            <!-- Дані будуть додані динамічно -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальне вікно з деталями бою -->
+        <div id="battle-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-header-info">
+                        <h2 id="detail-map">Назва мапи</h2>
+                        <p id="detail-time">Дата і час</p>
+                    </div>
+                    <div class="modal-header-result">
+                        <h3 id="detail-result">Результат</h3>
+                        <p id="detail-duration">Тривалість: 0:00</p>
+                    </div>
+                    <button id="close-modal" class="close-modal">&times;</button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="modal-tabs">
+                        <button class="modal-tab-btn active" data-modal-tab="summary">Загальне</button>
+                        <button class="modal-tab-btn" data-modal-tab="players">Гравці</button>
+                        <button class="modal-tab-btn" data-modal-tab="analysis">Аналіз</button>
+                    </div>
+                    
+                    <div class="modal-tab-content active" id="modal-summary-tab">
+                        <h3>Сумарні Результати за бій</h3>
+                        <div class="stat-summary">
+                            <div class="stat-summary-item">
+                                <div class="stat-icon">
+                                    <i class="fas fa-bolt"></i>
+                                </div>
+                                <div class="stat-value damage" id="modal-damage">0</div>
+                                <div class="stat-label">Шкода</div>
+                            </div>
+                            
+                            <div class="stat-summary-item">
+                                <div class="stat-icon">
+                                    <i class="fas fa-skull"></i>
+                                </div>
+                                <div class="stat-value frags" id="modal-frags">0</div>
+                                <div class="stat-label">Фраги</div>
+                            </div>
+                            
+                            <div class="stat-summary-item">
+                                <div class="stat-icon">
+                                    <i class="fas fa-trophy"></i>
+                                </div>
+                                <div class="stat-value total-points" id="modal-points">0</div>
+                                <div class="stat-label">Очки</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-tab-content" id="modal-players-tab">
+                        <h3>Статистика гравців</h3>
+                        <div class="modal-players-table-container">
+                            <table class="modal-players-table">
+                                <thead>
+                                    <tr>
+                                        <th>Гравець</th>
+                                        <th>Танк</th>
+                                        <th>Шкода</th>
+                                        <th>Фраги</th>
+                                        <th>Очки</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="modal-players-table-body">
+                                    <!-- Дані будуть додані динамічно -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-tab-content" id="modal-analysis-tab">
+                        <h3>Аналіз бою</h3>
+                        <div class="battle-analysis">
+                            <div class="analysis-chart-container">
+                                <canvas id="battle-contribution-chart"></canvas>
+                            </div>
+                            <div class="analysis-section">
+                                <h4>Ключові показники</h4>
+                                <ul id="battle-key-metrics">
+                                    <!-- Ключові метрики будуть додані динамічно -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Підключення бібліотек діаграм -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    
+    <!-- Підключення головного модуля -->
+    <script type="module" src="./scripts/mainHistory.js"></script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Статистика</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="./libs/wotstat-widgets-sdk.umd.js"></script>
+  <link rel="stylesheet" href="./styles/main_new.css">
+</head>
+<body>
+  <div class="layout-container">
+    <div class="card">
+      <!-- Приховуємо заголовки стовпців -->
+      <div class="stats-headers" style="display: none;">
+        <div>НІКНЕЙМ</div>
+        <div>ШКОДА</div>
+        <div>ФРАГИ</div>
+      </div>
+      
+      <div class="player-list" id="player-container">
+        <div class="empty-message">Гравців у взводі не знайдено</div>
+      </div>
+
+<div class="summary-stats">
+  <div class="stat-item battle-label"> <span id="battles-count">0/0</span></div>
+  <div class="stat-item battle-stats">
+    <div class="best-row"><span id="best-battle" class="best-battle-value">0</span></div>
+    <div class="worst-row"><span id="worst-battle" class="worst-battle-value">0</span></div>
+  </div>
+  <!-- <div class="stat-item frags-label">Фраги: <span id="total-frags" class="frags-value">0</span></div> -->
+  <div class="stat-item points-label"> <span id="team-now-points" class="points-value">0</span></div>
+  <div class="stat-item points-label"> <span id="team-points" class="points-value">0</span></div>
+  <!-- Приховані елементи для роботи коду -->
+  <div id="team-damage" style="display:none">0</div>
+  <div id="team-frags" style="display:none">0</div>
+</div>
+    </div>
+    
+    <div class="side-buttons">
+      <button id="refresh-btn">Оновити віджет</button>
+      <button id="remove-history-btn">Видалити історію</button>
+      <button id="view-history-btn">Переглянути історію</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import SquadWidget from './scripts/main.js'; 
+    document.addEventListener('DOMContentLoaded', () => {
+      new SquadWidget();
+    });
+  </script>  
+</body>
+</html>

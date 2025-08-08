@@ -1,0 +1,837 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #1a1a1a;
+  color: #fff;
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #fff;
+  font-size: 28px;
+}
+
+/* Вкладки */
+.tabs-container {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 5px;
+}
+
+.tab-btn {
+  background-color: #3a3a3a;
+  color: #aaa;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  background-color: #4a4a4a;
+  color: #fff;
+}
+
+.tab-btn.active {
+  background-color: #4e54c8;
+  color: white;
+}
+
+.tab-content {
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.filters-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Загальні стилі фільтрів */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: rgba(40, 40, 40, 0.7);
+  border-radius: 8px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  margin-right: 15px;
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+select, input, button {
+  background-color: #3a3a3a;
+  color: white;
+  border: 1px solid #555;
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+button {
+  cursor: pointer;
+  background-color: #4e54c8;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: #373b9d;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+}
+
+/* Таблиця битв */
+.battle-table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 30px;
+  position: relative;
+}
+
+.column-selector {
+  margin-bottom: 10px;
+  position: relative;
+  display: inline-block;
+}
+
+.column-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: #333;
+  border-radius: 4px;
+  padding: 10px;
+  z-index: 100;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  min-width: 180px;
+}
+
+.column-dropdown.show {
+  display: block;
+  animation: fadeIn 0.2s;
+}
+
+.column-dropdown div {
+  margin: 5px 0;
+}
+
+.column-dropdown label {
+  margin-left: 5px;
+  cursor: pointer;
+}
+
+.battle-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.battle-table th, 
+.battle-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #333;
+}
+
+.battle-table th {
+  background-color: #2c2c2c;
+  color: #ddd;
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.battle-table tbody tr {
+  background-color: rgba(40, 40, 40, 0.5);
+}
+
+.battle-table tbody tr:hover {
+  background-color: rgba(60, 60, 60, 0.7);
+}
+
+/* Найгірший бій */
+.worst-battle {
+  background-color: rgba(255, 50, 50, 0.15) !important;
+}
+
+.worst-battle:hover {
+  background-color: rgba(255, 50, 50, 0.25) !important;
+}
+
+.worst-battle td:first-child {
+  position: relative;
+  padding-left: 25px;
+}
+
+.worst-battle td:first-child::before {
+  content: "‼";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ff3232;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* Найкращий бій */
+.best-battle {
+  background-color: rgba(78, 225, 0, 0.15) !important;
+}
+
+.best-battle:hover {
+  background-color: rgba(78, 225, 0, 0.25) !important;
+}
+
+.best-battle td:first-child {
+  position: relative;
+  padding-left: 25px;
+}
+
+.best-battle td:first-child::before {
+  content: "★";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #4ee100;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* Кольори результатів */
+.victory { color: #4ee100; font-weight: bold; }
+.defeat { color: #ff4040; font-weight: bold; }
+.draw { color: #ffd700; font-weight: bold; }
+.inBattle { color: #ff00ea; font-weight: bold; }
+.damage { color: #ff9c00; }
+.frags { color: #4ee100; }
+.points { color: #4ee100; }
+.total-points { color: #d580ff; }
+
+/* Загальна статистика */
+.summary-stats, .player-stats-container, .vehicle-stats-container {
+  margin-top: 10px;
+  margin-bottom: 30px;
+  background-color: rgba(40, 40, 40, 0.7);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.stats-header {
+  margin-bottom: 15px;
+  border-bottom: 1px solid #555;
+  padding-bottom: 10px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background-color: rgba(50, 50, 50, 0.7);
+  border-radius: 6px;
+  padding: 15px;
+  transition: transform 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.stat-title {
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.stat-value.wins { color: #4ee100; }
+.stat-value.defeat { color: #ff4040; }
+.stat-value.damage { color: #ff9c00; }
+.stat-value.frags { color: #4ee100; }
+.stat-value.total-points { color: #d580ff; }
+
+/* Контейнер для діаграм */
+.chart-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.chart-wrapper {
+  background-color: rgba(40, 40, 40, 0.5);
+  border-radius: 8px;
+  padding: 15px;
+  height: 300px;
+  position: relative;
+}
+
+/* Стилі для вкладки гравців */
+.players-table-container,
+.vehicles-table-container {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+.players-table,
+.vehicles-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.players-table th, 
+.players-table td,
+.vehicles-table th, 
+.vehicles-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #333;
+}
+
+.players-table th,
+.vehicles-table th {
+  background-color: #2c2c2c;
+  color: #ddd;
+}
+
+.players-table tbody tr,
+.vehicles-table tbody tr {
+  background-color: rgba(40, 40, 40, 0.5);
+}
+
+.players-table tbody tr:hover,
+.vehicles-table tbody tr:hover {
+  background-color: rgba(60, 60, 60, 0.7);
+}
+
+/* Модальне вікно */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(3px);
+}
+
+.modal-content {
+  background-color: rgba(30, 30, 30, 0.95);
+  margin: 5% auto;
+  width: 80%;
+  max-width: 800px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  animation: modalFadeIn 0.3s;
+  border: 1px solid rgba(80, 80, 80, 0.3);
+  overflow: hidden;
+  transform: scale(0.9);
+  opacity: 0;
+  transition: transform 0.3s, opacity 0.3s;
+}
+
+.modal-content.show {
+  transform: scale(1);
+  opacity: 1;
+}
+
+@keyframes modalFadeIn {
+  from {opacity: 0; transform: translateY(-30px) scale(0.9);}
+  to {opacity: 1; transform: translateY(0) scale(1);}
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px;
+  border-bottom: 1px solid rgba(80, 80, 80, 0.3);
+  position: relative;
+}
+
+.modal-header-info {
+  flex: 1;
+}
+
+.modal-header-info h2 {
+  margin: 0 0 10px 0;
+  color: #fff;
+}
+
+.modal-header-info p {
+  margin: 0;
+  color: #aaa;
+}
+
+.modal-header-result {
+  text-align: right;
+  margin-right: 40px;
+}
+
+.modal-header-result h3 {
+  margin: 0 0 5px 0;
+}
+
+.close-modal {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #aaa;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.close-modal:hover {
+  color: #fff;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+/* Вкладки в модальному вікні */
+.modal-tabs {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 5px;
+}
+
+.modal-tab-btn {
+  background-color: #3a3a3a;
+  color: #aaa;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.modal-tab-btn:hover {
+  background-color: #4a4a4a;
+  color: #fff;
+}
+
+.modal-tab-btn.active {
+  background-color: #4e54c8;
+  color: white;
+}
+
+.modal-tab-content {
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-tab-content.active {
+  display: block;
+}
+
+.modal-body h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #ddd;
+  text-align: center;
+}
+
+.stat-summary {
+  display: flex;
+  justify-content: space-around;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.stat-summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: rgba(40, 40, 40, 0.7);
+  border-radius: 10px;
+  padding: 20px;
+  flex: 1;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-summary-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.stat-icon {
+  font-size: 24px;
+  margin-bottom: 10px;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: rgba(50, 50, 50, 0.7);
+}
+
+.stat-summary-item:nth-child(1) .stat-icon {
+  color: #ff9c00;
+}
+
+.stat-summary-item:nth-child(2) .stat-icon {
+  color: #4ee100;
+}
+
+.stat-summary-item:nth-child(3) .stat-icon {
+  color: #d580ff;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  color: #aaa;
+  font-size: 14px;
+}
+
+/* Статистика гравців в модальному вікні */
+.modal-players-table-container {
+  overflow-x: auto;
+}
+
+.modal-players-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.modal-players-table th, 
+.modal-players-table td {
+  padding: 10px 15px;
+  text-align: left;
+  border-bottom: 1px solid #333;
+}
+
+.modal-players-table th {
+  background-color: #2c2c2c;
+  color: #ddd;
+}
+
+.modal-players-table tbody tr {
+  background-color: rgba(40, 40, 40, 0.5);
+}
+
+.modal-players-table tbody tr:hover {
+  background-color: rgba(60, 60, 60, 0.7);
+}
+
+/* Аналіз бою в модальному вікні */
+.battle-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.analysis-chart-container {
+  background-color: rgba(40, 40, 40, 0.5);
+  border-radius: 8px;
+  padding: 15px;
+  height: 250px;
+  position: relative;
+}
+
+.analysis-section {
+  background-color: rgba(40, 40, 40, 0.5);
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.analysis-section h4 {
+  margin-top: 0;
+  color: #ddd;
+  border-bottom: 1px solid #444;
+  padding-bottom: 5px;
+  margin-bottom: 10px;
+}
+
+#battle-key-metrics {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#battle-key-metrics li {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(80, 80, 80, 0.3);
+  display: flex;
+  justify-content: space-between;
+}
+
+#battle-key-metrics li:last-child {
+  border-bottom: none;
+}
+
+/* Пагінація */
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+  margin-bottom: 30px;
+}
+
+.pagination button {
+  padding: 8px 15px;
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.pagination button.active {
+  background-color: #4e54c8;
+}
+
+/* Підсвічування найгіршого бою в модальному вікні */
+.worst-battle-modal {
+  border: 2px solid rgba(255, 50, 50, 0.5) !important;
+  box-shadow: 0 10px 30px rgba(255, 50, 50, 0.2) !important;
+}
+
+.worst-battle-badge {
+  position: absolute;
+  top: 50%; 
+  left: 50%; 
+  transform: translate(-50%, -50%);
+  background-color: #ff3232;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 18px; 
+  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1010; 
+  animation: badgePulse 2s infinite;
+  opacity: 0.9; 
+}
+
+/* Підсвічування найкращого бою в модальному вікні */
+.best-battle-modal {
+  border: 2px solid rgba(78, 225, 0, 0.5) !important;
+  box-shadow: 0 10px 30px rgba(78, 225, 0, 0.2) !important;
+}
+
+.best-battle-badge {
+  position: absolute;
+  top: 50%; 
+  left: 50%; 
+  transform: translate(-50%, -50%);
+  background-color: #4ee100;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 18px; 
+  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1010; 
+  animation: badgePulse 2s infinite;
+  opacity: 0.9; 
+}
+
+@keyframes badgePulse {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
+}
+
+/* Стилі для оповіщень */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(20px); }
+}
+
+.notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 4px;
+  color: white;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+}
+
+.notification.success {
+  background-color: #4CAF50;
+}
+
+.notification.error {
+  background-color: #f44336;
+}
+
+/* Адаптивний дизайн */
+@media (max-width: 1400px) {
+  .stats-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+  
+  .battle-table th, 
+  .battle-table td {
+    padding: 10px 12px;
+  }
+  
+  .chart-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1200px) {
+  .battle-table {
+    min-width: 1100px;
+  }
+  
+  .modal-content {
+    width: 90%;
+  }
+}
+
+@media (max-width: 992px) {
+  .filter-row {
+    flex-direction: column;
+  }
+  
+  .filter-group {
+    width: 100%;
+    margin-right: 0;
+  }
+  
+  .filter-group select,
+  .filter-group input {
+    width: 100%;
+  }
+  
+  .filter-actions {
+    flex-direction: column;
+  }
+  
+  .button-group {
+    width: 100%;
+  }
+  
+  .stat-summary {
+    flex-direction: column;
+  }
+  
+  .tabs {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 10px;
+  }
+  
+  .tab-btn {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    margin: 10% auto;
+  }
+  
+  .modal-header {
+    flex-direction: column;
+  }
+  
+  .modal-header-result {
+    margin-right: 0;
+    margin-top: 10px;
+    text-align: left;
+  }
+  
+  .container {
+    padding: 0 10px;
+  }
+}
