@@ -72,11 +72,19 @@ class CoreService {
         // Unwrap server payload from _id structure to widget's expected shape
         const normalized = {};
         Object.entries(data.BattleStats).forEach(([arenaId, battleWrapper]) => {
-          const battle = battleWrapper._id || battleWrapper; // Handle both wrapped and unwrapped data
+          // Handle both wrapped (_id structure) and unwrapped data
+          const battle = (battleWrapper && typeof battleWrapper === 'object' && battleWrapper._id) 
+            ? battleWrapper._id 
+            : battleWrapper;
+          
           const players = {};
           const rawPlayers = battle?.players || {};
           Object.entries(rawPlayers).forEach(([pid, playerWrapper]) => {
-            const p = playerWrapper._id || playerWrapper; // Handle both wrapped and unwrapped data
+            // Handle both wrapped (_id structure) and unwrapped player data
+            const p = (playerWrapper && typeof playerWrapper === 'object' && playerWrapper._id) 
+              ? playerWrapper._id 
+              : playerWrapper;
+            
             const kills = (typeof p.kills === 'number') ? p.kills : (typeof p.frags === 'number' ? p.frags : 0);
             const damage = typeof p.damage === 'number' ? p.damage : 0;
             const points = typeof p.points === 'number' ? p.points : (damage + kills * GAME_POINTS.POINTS_PER_FRAG);
@@ -99,7 +107,16 @@ class CoreService {
         this.BattleStats = normalized;
       }
       if (data.PlayerInfo) {
-        this.PlayersInfo = data.PlayerInfo;
+        // Unwrap PlayerInfo from _id structure if needed
+        const normalizedPlayerInfo = {};
+        Object.entries(data.PlayerInfo).forEach(([playerId, playerWrapper]) => {
+          if (typeof playerWrapper === 'object' && playerWrapper._id) {
+            normalizedPlayerInfo[playerId] = playerWrapper._id;
+          } else {
+            normalizedPlayerInfo[playerId] = playerWrapper;
+          }
+        });
+        this.PlayersInfo = normalizedPlayerInfo;
       }
       this.clearCalculationCache();
       this.eventsCore.emit('statsUpdated');
