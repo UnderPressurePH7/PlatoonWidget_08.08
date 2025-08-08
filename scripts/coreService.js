@@ -52,6 +52,18 @@ class CoreService {
     this.socket.on('connect_error', (error) => {
       console.error('Socket.IO connection error:', error);
     });
+
+    this.socket.on('reconnect_failed', () => {
+      console.error('Socket.IO reconnection failed. Switching to REST fallback.');
+    });
+
+    this.socket.on('error', (error) => {
+      console.error('Socket.IO error:', error);
+    });
+  }
+
+  isDataChanged(newData, oldData) {
+    return JSON.stringify(newData) !== JSON.stringify(oldData);
   }
 
   handleServerData(data) {
@@ -546,9 +558,12 @@ class CoreService {
 
   async serverData() {
     try {
+      const oldStats = JSON.stringify(this.BattleStats);
       await this.saveToServer();
-      this.eventsCore.emit('statsUpdated');
-      this.saveState();
+      if (this.isDataChanged(this.BattleStats, JSON.parse(oldStats))) {
+        this.eventsCore.emit('statsUpdated');
+        this.saveState();
+      }
     } catch (error) {
       console.error('Error in serverData:', error);
     }
@@ -606,13 +621,16 @@ class CoreService {
    
   async handleisInBattle(isInBattle) {
     this.isInBattle = isInBattle;
-
+    if (!this.isInPlatoon && this.isInBattle) {
+      return;
+    }
     await Utils.getRandomDelay()
     // await this.refreshLocalData(); // TESTING
   }
 
   handlePeriod(period) {
     if (!period || !this.isValidBattleState()) return;
+    if (!this.isInPlatoon) return;
 
     if (period.tag == "PREBATTLE") {
       this.lastUpdateTime = Date.now();
@@ -630,6 +648,7 @@ class CoreService {
 
   handlePlayerFeedback(feedback) {
     if (!feedback || !feedback.type) return;
+    if (!this.isInPlatoon) return;
 
     const handlers = {
       'damage': this.handlePlayerDamage.bind(this),

@@ -187,6 +187,18 @@ class BattleDataManager {
     }
   }
 
+  async clearServerData() {
+    const accessKey = this.getAccessKey();
+    if (!accessKey) {
+      throw new Error('Access key not found');
+    }
+    await this.makeServerRequest(`${atob(STATS.BATTLE)}clear/${accessKey}`, {
+      method: 'GET'
+    });
+    await this.refreshLocalData();
+    this.eventsHistory.emit('historyCleared');
+  }
+
   async deleteBattle(battleId) {
     try {
       const accessKey = this.getAccessKey();
@@ -194,7 +206,7 @@ class BattleDataManager {
         throw new Error('Access key not found');
       }
       
-  await this.makeServerRequest(`${atob(STATS.BATTLE)}${accessKey}/${battleId}`, {
+      await this.makeServerRequest(`${atob(STATS.BATTLE)}${accessKey}/${battleId}`, {
         method: 'DELETE'
       });
 
