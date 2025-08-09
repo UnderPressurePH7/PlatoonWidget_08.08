@@ -48,7 +48,13 @@ class CoreService {
       });
 
       this.socket.on('statsUpdated', (data) => {
-        this.handleServerData(data);
+        if (data && data.key === accessKey) {
+          if (data.data) {
+            this.handleServerData(data.data);
+          } else {
+            this.loadUpdatedStats();
+          }
+        }
       });
 
       this.socket.on('disconnect', (reason) => {
@@ -175,14 +181,14 @@ class CoreService {
   }
 
   setupSDKListeners() {
-    this.sdk.data.game.serverTime.watch(this.handleServerTime.bind(this));
+    // this.sdk.data.game.serverTime.watch(this.handleServerTime.bind(this));
     this.sdk.data.hangar.isInHangar.watch(this.handleHangarStatus.bind(this));
     this.sdk.data.hangar.vehicle.info.watch(this.handleHangarVehicle.bind(this));
     this.sdk.data.platoon.isInPlatoon.watch(this.handlePlatoonStatus.bind(this));
     this.sdk.data.battle.arena.watch(this.handleArena.bind(this));
     this.sdk.data.battle.period.watch(this.handlePeriod.bind(this));
     this.sdk.data.battle.isInBattle.watch(this.handleisInBattle.bind(this));
-    this.sdk.data.battle.onDamage.watch(this.handleOnAnyDamage.bind(this));
+    // this.sdk.data.battle.onDamage.watch(this.handleOnAnyDamage.bind(this));
     this.sdk.data.battle.onPlayerFeedback.watch(this.handlePlayerFeedback.bind(this));
     this.sdk.data.battle.onBattleResult.watch(this.handleBattleResult.bind(this));
   }
@@ -587,6 +593,15 @@ class CoreService {
     });
   }
 
+  async loadUpdatedStats() {
+    try {
+      await this.loadFromServer();
+      this.eventsCore.emit('statsUpdated');
+    } catch (error) {
+      console.error('Error in loadUpdatedStats:', error);
+    }
+  }
+
   async refreshLocalData() {
     this.clearState();
     await Utils.sleep(10);
@@ -708,25 +723,25 @@ class CoreService {
     }
   }
 
-  async handleServerTime(serverTime) {
-  }
+  // async handleServerTime(serverTime) {
+  // }
 
-  handleOnAnyDamage(onDamageData) {
-  }
+  // handleOnAnyDamage(onDamageData) {
+  // }
 
   handlePlayerFeedback(feedback) {
     if (!feedback || !feedback.type) return;
 
     const handlers = {
       'damage': this.handlePlayerDamage.bind(this),
-      'kill': this.handlePlayerKill.bind(this),
-      'radioAssist': this.handleGenericPlayerEvent.bind(this),
-      'trackAssist': this.handleGenericPlayerEvent.bind(this),
-      'tanking': this.handleGenericPlayerEvent.bind(this),
-      'receivedDamage': this.handleGenericPlayerEvent.bind(this),
-      'targetVisibility': this.handleGenericPlayerEvent.bind(this),
-      'detected': this.handleGenericPlayerEvent.bind(this),
-      'spotted': this.handleGenericPlayerEvent.bind(this)
+      'kill': this.handlePlayerKill.bind(this)
+      // 'radioAssist': this.handleGenericPlayerEvent.bind(this),
+      // 'trackAssist': this.handleGenericPlayerEvent.bind(this),
+      // 'tanking': this.handleGenericPlayerEvent.bind(this),
+      // 'receivedDamage': this.handleGenericPlayerEvent.bind(this),
+      // 'targetVisibility': this.handleGenericPlayerEvent.bind(this),
+      // 'detected': this.handleGenericPlayerEvent.bind(this),
+      // 'spotted': this.handleGenericPlayerEvent.bind(this)
     };
 
     const handler = handlers[feedback.type];
@@ -735,10 +750,10 @@ class CoreService {
     }
   }
 
-  handleGenericPlayerEvent(eventData) {
-    if (!eventData || !this.isValidBattleState()) return;
-    this.serverDataLoadOtherPlayersDebounced();
-  }
+  // handleGenericPlayerEvent(eventData) {
+  //   if (!eventData || !this.isValidBattleState()) return;
+  //   this.serverDataLoadOtherPlayersDebounced();
+  // }
 
   handlePlayerDamage(damageData) {
     if (!damageData || !this.isValidBattleState()) return;
