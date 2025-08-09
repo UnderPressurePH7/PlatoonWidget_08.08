@@ -30,34 +30,48 @@ class CoreService {
     }
     
     try {
+      console.log('Initializing WebSocket connection with key:', accessKey);
       this.socket = io(atob(STATS.WEBSOCKET_URL), {
         query: { key: accessKey },
         transports: ['websocket', 'polling'],
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
+        timeout: 20000,
       });
 
       this.socket.on('connect', () => {
+        console.log('WebSocket connected successfully');
         this.socket.emit('getStats', { key: accessKey }, (response) => {
-          if (response.status === 200) {
+          if (response && response.status === 200) {
+            console.log('Initial stats loaded via WebSocket:', response.body);
             this.handleServerData(response.body);
+            this.clearCalculationCache();
+            this.eventsCore.emit('statsUpdated');
+            this.saveState();
           } else {
-            console.error('Error getting initial stats:', response.body.message);
+            console.error('Error getting initial stats:', response?.body?.message || 'Unknown error');
           }
         });
       });
 
       this.socket.on('statsUpdated', (data) => {
+        console.log('Received statsUpdated event:', data);
         if (data && data.key === accessKey) {
-          if (data.data) {
-            this.handleServerData(data.data);
-          } else {
-            this.loadFromServer();
-          }
+          // Завантажуємо оновлені дані з сервера
+          this.socket.emit('getStats', { key: accessKey }, (response) => {
+            if (response && response.status === 200) {
+              console.log('Stats updated from server:', response.body);
+              this.handleServerData(response.body);
+              this.clearCalculationCache();
+              this.eventsCore.emit('statsUpdated');
+              this.saveState();
+            }
+          });
         }
       });
 
       this.socket.on('disconnect', (reason) => {
+        console.log('WebSocket disconnected:', reason);
       });
 
       this.socket.on('connect_error', (error) => {
@@ -84,17 +98,15 @@ class CoreService {
     if (data.success) {
       if (data.BattleStats) {
         const normalized = {};
-        Object.entries(data.BattleStats).forEach(([arenaId, battleWrapper]) => {
-          const battle = (battleWrapper && typeof battleWrapper === 'object' && battleWrapper._id) 
-            ? battleWrapper._id 
-            : battleWrapper;
+        Object.entries(data.BattleStats).forEach(([arenaId, battle]) => {
+          // Обробляємо дані бою - сервер може повертати або пряму структуру, або обгорнуту в _id
+          const battleData = (battle && typeof battle === 'object' && battle._id) ? battle._id : battle;
           
           const players = {};
-          const rawPlayers = battle?.players || {};
-          Object.entries(rawPlayers).forEach(([pid, playerWrapper]) => {
-            const p = (playerWrapper && typeof playerWrapper === 'object' && playerWrapper._id) 
-              ? playerWrapper._id 
-              : playerWrapper;
+          const rawPlayers = battleData?.players || {};
+          Object.entries(rawPlayers).forEach(([pid, playerData]) => {
+            // Обробляємо дані гравця - сервер може повертати або пряму структуру, або обгорнуту в _id
+            const p = (playerData && typeof playerData === 'object' && playerData._id) ? playerData._id : playerData;
             
             const kills = (typeof p.kills === 'number') ? p.kills : (typeof p.frags === 'number' ? p.frags : 0);
             const damage = typeof p.damage === 'number' ? p.damage : 0;
@@ -126,10 +138,10 @@ class CoreService {
           // Перевірка для арени
           const existingBattle = this.BattleStats?.[arenaId];
           normalized[arenaId] = {
-            startTime: battle.startTime || (existingBattle?.startTime) || Date.now(),
-            duration: Math.max(battle.duration ?? 0, existingBattle?.duration ?? 0),
-            win: typeof battle.win === 'number' ? battle.win : (existingBattle?.win ?? -1),
-            mapName: battle.mapName || (existingBattle?.mapName) || 'Unknown Map',
+            startTime: battleData.startTime || (existingBattle?.startTime) || Date.now(),
+            duration: Math.max(battleData.duration ?? 0, existingBattle?.duration ?? 0),
+            win: typeof battleData.win === 'number' ? battleData.win : (existingBattle?.win ?? -1),
+            mapName: battleData.mapName || (existingBattle?.mapName) || 'Unknown Map',
             players
           };
         });
@@ -145,11 +157,14 @@ class CoreService {
       }
       if (data.PlayerInfo) {
         const normalizedPlayerInfo = {};
-        Object.entries(data.PlayerInfo).forEach(([playerId, playerWrapper]) => {
-          if (typeof playerWrapper === 'object' && playerWrapper._id) {
-            normalizedPlayerInfo[playerId] = playerWrapper._id;
+        Object.entries(data.PlayerInfo).forEach(([playerId, playerInfo]) => {
+          // Сервер повертає PlayerInfo як { "_id": "nickname" } або просто "nickname"
+          if (typeof playerInfo === 'object' && playerInfo._id) {
+            normalizedPlayerInfo[playerId] = playerInfo._id;
+          } else if (typeof playerInfo === 'string') {
+            normalizedPlayerInfo[playerId] = playerInfo;
           } else {
-            normalizedPlayerInfo[playerId] = playerWrapper;
+            normalizedPlayerInfo[playerId] = playerInfo;
           }
         });
         this.PlayersInfo = normalizedPlayerInfo;
@@ -260,6 +275,19 @@ class CoreService {
     }
 
     if (!this.BattleStats[arenaId].players[playerId]) {
+      // Переконуємося, що у нас є інформація про гравця в PlayerInfo
+      if (!this.PlayersInfo[playerId] && playerId === this.curentPlayerId) {
+        // Якщо це поточний гравець і ми не знаємо його імені, спробуємо отримати з SDK
+        try {
+          const playerName = this.sdk?.data?.player?.name?.value || 'Unknown Player';
+          this.PlayersInfo[playerId] = playerName;
+          console.log(`Added current player to PlayerInfo: ${playerId} -> ${playerName}`);
+        } catch (error) {
+          console.error('Error getting player name from SDK:', error);
+          this.PlayersInfo[playerId] = 'Unknown Player';
+        }
+      }
+
       this.BattleStats[arenaId].players[playerId] = {
         name: this.PlayersInfo[playerId] || 'Unknown Player',
         damage: 0,
@@ -486,42 +514,46 @@ class CoreService {
           const players = {};
           Object.entries(battle.players || {}).forEach(([pid, p]) => {
             players[pid] = {
-              _id: {
-                name: p.name || 'Unknown Player',
-                damage: p.damage || 0,
-                kills: p.kills || 0,
-                frags: typeof p.kills === 'number' ? p.kills : (typeof p.frags === 'number' ? p.frags : 0),
-                points: p.points || 0,
-                vehicle: p.vehicle || 'Unknown Vehicle'
-              }
+              name: p.name || 'Unknown Player',
+              damage: p.damage || 0,
+              kills: p.kills || 0,
+              frags: p.kills || 0, // Сервер використовує frags
+              points: p.points || 0,
+              vehicle: p.vehicle || 'Unknown Vehicle'
             };
           });
           return [arenaId, { 
-            _id: {
-              startTime: battle.startTime || Date.now(),
-              duration: battle.duration || 0,
-              win: battle.win || -1,
-              mapName: battle.mapName || 'Unknown Map',
-              players
-            }
+            startTime: battle.startTime || Date.now(),
+            duration: battle.duration || 0,
+            win: battle.win !== undefined ? battle.win : -1,
+            mapName: battle.mapName || 'Unknown Map',
+            players
           }];
         })),
-        PlayerInfo: this.PlayersInfo,
+        PlayerInfo: Object.fromEntries(Object.entries(this.PlayersInfo || {}).map(([pid, nickname]) => [
+          pid, 
+          typeof nickname === 'string' ? nickname : (nickname._id || nickname.name || 'Unknown Player')
+        ])),
       }
     };
     
     console.log('Data to send to server:', JSON.stringify(dataToSend.body, null, 2));
+    console.log('Player ID:', this.curentPlayerId);
+    console.log('Access Key:', accessKey);
     
     if (this.socket && this.socket.connected) {
       let saveCallbackReceived = false;
       let fallbackUsed = false;
       
+      console.log('Sending data via WebSocket...');
       this.socket.emit('updateStats', dataToSend, (response) => {
         if (!fallbackUsed) {
           saveCallbackReceived = true;
           console.log('WebSocket response:', response);
-          if (response.status !== 202) {
-            console.error('Error updating stats:', response.body?.message || 'Unknown error');
+          if (response && response.status === 202) {
+            console.log('Data saved successfully via WebSocket');
+          } else {
+            console.error('Error updating stats via WebSocket:', response?.body?.message || 'Unknown error');
           }
         }
       });
@@ -529,6 +561,7 @@ class CoreService {
       setTimeout(async () => {
         if (!saveCallbackReceived && !fallbackUsed) {
           fallbackUsed = true;
+          console.log('WebSocket timeout, falling back to REST API');
           await this.saveViaREST(dataToSend.body, accessKey);
         }
       }, 3000);
@@ -544,6 +577,9 @@ class CoreService {
       console.log('REST data to send:', JSON.stringify(data, null, 2));
       
       const url = `${atob(STATS.BATTLE)}${accessKey}`;
+      console.log('REST API URL:', url);
+      console.log('Player ID for headers:', this.curentPlayerId);
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -558,9 +594,13 @@ class CoreService {
       if (response.ok) {
         const result = await response.json();
         console.log('REST API response body:', result);
+        if (result.success) {
+          console.log('Data saved successfully via REST API');
+        }
         return true;
       } else {
-        console.error('REST API error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('REST API error:', response.status, response.statusText, errorText);
         return false;
       }
     } catch (e) {
@@ -576,19 +616,27 @@ class CoreService {
 
     if (this.socket && this.socket.connected) {
       this.socket.emit('getStats', { key: accessKey }, (response) => {
-        if (response.status === 200) {
+        if (response && response.status === 200) {
           this.handleServerData(response.body);
           this.clearCalculationCache();
           this.eventsCore.emit('statsUpdated');
           this.saveState();
         } else {
-          console.error('Error getting initial stats via socket:', response.body?.message || 'Unknown error');
+          console.error('Error getting initial stats via socket:', response?.body?.message || 'Unknown error');
+          // Fallback to REST API if WebSocket fails
+          this.loadViaREST(accessKey);
         }
       });
       return;
     }
 
+    // Fallback to REST API
+    await this.loadViaREST(accessKey);
+  }
+
+  async loadViaREST(accessKey) {
     try {
+      console.log('Using REST API to load data');
       const url = `${atob(STATS.BATTLE)}${accessKey}`;
       const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
       if (res.ok) {
@@ -597,9 +645,11 @@ class CoreService {
         this.clearCalculationCache();
         this.eventsCore.emit('statsUpdated');
         this.saveState();
+      } else {
+        console.error('REST API error:', res.status, res.statusText);
       }
-    } catch (e) {
-      console.error('REST fallback getStats failed:', e);
+    } catch (error) {
+      console.error('Error loading from server via REST:', error);
     }
   }
 
@@ -609,13 +659,13 @@ class CoreService {
 
     if (this.socket && this.socket.connected) {
       this.socket.emit('getOtherPlayersStats', { key: accessKey, playerId: this.curentPlayerId }, (response) => {
-        if (response.status === 200) {
+        if (response && response.status === 200) {
           this.handleServerData(response.body);
           this.clearCalculationCache();
           this.eventsCore.emit('statsUpdated');
           this.saveState();
         } else {
-          console.error('Error getting other players stats via socket:', response.body?.message || 'Unknown error');
+          console.error('Error getting other players stats via socket:', response?.body?.message || 'Unknown error');
         }
       });
       return;
@@ -640,6 +690,21 @@ class CoreService {
     const accessKey = this.getAccessKey();
     if (!accessKey) {
       console.error('Access key not found for clearing data.');
+      return;
+    }
+
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('clearStats', { key: accessKey }, (response) => {
+        if (response && response.status === 200) {
+          this.BattleStats = {};
+          this.PlayersInfo = {};
+          this.clearCalculationCache();
+          this.eventsCore.emit('statsUpdated');
+          console.log('Server data cleared successfully via WebSocket');
+        } else {
+          console.error('Error clearing data via socket:', response?.body?.message || 'Unknown error');
+        }
+      });
       return;
     }
 
@@ -839,19 +904,26 @@ class CoreService {
     const playerId = this.curentPlayerId;
     
     console.log(`Handling damage: ${damageData.damage} for player ${playerId} in arena ${arenaId}`);
+    console.log('Damage data:', damageData);
     
     // Перевірка чи існує запис гравця
     if (this.isExistsPlayerRecord()) {
       this.initializeBattleStats(arenaId, playerId);
       
-      this.BattleStats[arenaId].players[playerId].damage += damageData.damage;
+      const currentDamage = this.BattleStats[arenaId].players[playerId].damage || 0;
+      const newDamage = currentDamage + damageData.damage;
+      
+      this.BattleStats[arenaId].players[playerId].damage = newDamage;
       this.BattleStats[arenaId].players[playerId].points += damageData.damage * GAME_POINTS.POINTS_PER_DAMAGE;
       
       console.log(`Updated player stats:`, this.BattleStats[arenaId].players[playerId]);
+      console.log(`Total damage now: ${newDamage} (was: ${currentDamage})`);
 
       this.clearCalculationCache();
       console.log('Calling serverDataDebounced after damage');
       this.serverDataDebounced();
+    } else {
+      console.log('Player record does not exist, skipping damage handling');
     }
   }
 
@@ -862,19 +934,25 @@ class CoreService {
     const playerId = this.curentPlayerId;
     
     console.log(`Handling kill for player ${playerId} in arena ${arenaId}`);
+    console.log('Kill data:', killData);
     
     // Перевірка чи існує запис гравця
     if (this.isExistsPlayerRecord()) {
       this.initializeBattleStats(arenaId, playerId);
       
-      this.BattleStats[arenaId].players[playerId].kills += 1;
+      const currentKills = this.BattleStats[arenaId].players[playerId].kills || 0;
+      
+      this.BattleStats[arenaId].players[playerId].kills = currentKills + 1;
       this.BattleStats[arenaId].players[playerId].points += GAME_POINTS.POINTS_PER_FRAG;
       
       console.log(`Updated player stats after kill:`, this.BattleStats[arenaId].players[playerId]);
+      console.log(`Total kills now: ${currentKills + 1} (was: ${currentKills})`);
 
       this.clearCalculationCache();
       console.log('Calling serverDataDebounced after kill');
       this.serverDataDebounced();
+    } else {
+      console.log('Player record does not exist, skipping kill handling');
     }
   }
 
@@ -889,9 +967,27 @@ class CoreService {
 
     this.curentPlayerId = result.personal.avatar.accountDBID;
     
+    console.log('Processing battle result for arena:', arenaId);
+    console.log('Current player ID:', this.curentPlayerId);
+    
+    // Збираємо інформацію про всіх гравців для PlayerInfo
+    if (result.players) {
+      Object.entries(result.players).forEach(([playerId, playerData]) => {
+        if (playerData.name && !this.PlayersInfo[playerId]) {
+          this.PlayersInfo[playerId] = playerData.name;
+          console.log(`Added player to PlayerInfo: ${playerId} -> ${playerData.name}`);
+        }
+      });
+    }
+    
     this.initializeBattleStats(arenaId, this.curentPlayerId);
     
     this.BattleStats[arenaId].duration = result.common.duration;
+
+    // Встановлюємо назву карти, якщо доступна
+    if (result.common.arenaTag) {
+      this.BattleStats[arenaId].mapName = result.common.arenaTag;
+    }
 
     const playerTeam = Number(result.players[this.curentPlayerId].team);
     const winnerTeam = Number(result.common.winnerTeam);
@@ -914,6 +1010,13 @@ class CoreService {
           playerStats.damage = vehicle.damageDealt;
           playerStats.kills = vehicle.kills;
           playerStats.points = vehicle.damageDealt + (vehicle.kills * GAME_POINTS.POINTS_PER_FRAG);
+          
+          // Оновлюємо назву танка, якщо доступна
+          if (vehicle.typeCompDescr || vehicle.vehicleName) {
+            playerStats.vehicle = vehicle.vehicleName || vehicle.typeCompDescr || 'Unknown Vehicle';
+          }
+          
+          console.log('Updated player stats from battle result:', playerStats);
           break;
         }
       }
