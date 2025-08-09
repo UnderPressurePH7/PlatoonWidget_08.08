@@ -173,9 +173,22 @@ class UIService {
         newRefreshBtn.disabled = true;
         newRefreshBtn.textContent = 'Оновлення...';
 
+        console.log('Starting refresh process...');
+        
+        // Спочатку зберігаємо поточні дані на сервер
+        console.log('Saving current data to server...');
+        await this.core.serverDataSave();
+        console.log('Data saved to server successfully');
+        
+        // Потім завантажуємо свіжі дані з сервера
+        console.log('Loading fresh data from server...');
         await this.core.loadFromServer();
+        console.log('Data loaded from server successfully');
+        
+        console.log('Updating UI...');
         this.updatePlayersUI();
         this.core.saveState();
+        console.log('Refresh process completed successfully');
 
       } catch (error) {
         console.error('Error updating data:', error);
@@ -218,27 +231,28 @@ class UIService {
         newRestoreBtn.disabled = true;
         newRestoreBtn.textContent = 'Видалення...';
 
-        // Спочатку завантажуємо свіжі дані з сервера
-        try {
-          await this.core.loadFromServer();
-        } catch (loadError) {
-          console.warn('Попередження при завантаженні даних:', loadError);
-        }
-
+        console.log('Starting history clearing process...');
+        
         // Очищуємо дані на сервері
+        console.log('Clearing server data...');
         await this.core.clearServerData();
+        console.log('Server data cleared successfully');
         
         // Очищуємо локальний стан
+        console.log('Clearing local state...');
         this.core.clearState();
+        console.log('Local state cleared successfully');
         
         // Оновлюємо UI
+        console.log('Updating UI...');
         this.updatePlayersUI();
         
         // Очищуємо весь localStorage (як в оригіналі)
+        console.log('Clearing localStorage...');
         localStorage.clear();
         this.resetTeamStatsUI();
 
-        console.log('History cleared successfully');
+        console.log('History cleared successfully - all operations completed');
 
       } catch (error) {
         console.error('Error when deleting statistics:', error);

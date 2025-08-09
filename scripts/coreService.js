@@ -90,9 +90,13 @@ class CoreService {
 
   handleServerData(data) {
     if (data.success) {
-      if (data.BattleStats) {
+      // Підтримка обох форматів: старого (BattleStats) та нового (battleStats)
+      const battleStats = data.battleStats || data.BattleStats;
+      const playersInfo = data.playersInfo || data.PlayerInfo;
+      
+      if (battleStats) {
         const normalized = {};
-        Object.entries(data.BattleStats).forEach(([arenaId, battle]) => {
+        Object.entries(battleStats).forEach(([arenaId, battle]) => {
           // Обробляємо дані бою - сервер може повертати або пряму структуру, або обгорнуту в _id
           const battleData = (battle && typeof battle === 'object' && battle._id) ? battle._id : battle;
           
@@ -149,10 +153,11 @@ class CoreService {
         
         this.BattleStats = normalized;
       }
-      if (data.PlayerInfo) {
+      
+      if (playersInfo) {
         const normalizedPlayerInfo = {};
-        Object.entries(data.PlayerInfo).forEach(([playerId, playerInfo]) => {
-          // Сервер повертає PlayerInfo як { "_id": "nickname" } або просто "nickname"
+        Object.entries(playersInfo).forEach(([playerId, playerInfo]) => {
+          // Сервер повертає playersInfo як { "_id": "nickname" } або просто "nickname"
           if (typeof playerInfo === 'object' && playerInfo._id) {
             normalizedPlayerInfo[playerId] = playerInfo._id;
           } else if (typeof playerInfo === 'string') {
@@ -503,7 +508,7 @@ class CoreService {
       key: accessKey,
       playerId: this.curentPlayerId,
       body: {
-        BattleStats: Object.fromEntries(Object.entries(this.BattleStats || {}).map(([arenaId, battle]) => {
+        battleStats: Object.fromEntries(Object.entries(this.BattleStats || {}).map(([arenaId, battle]) => {
           const players = {};
           Object.entries(battle.players || {}).forEach(([pid, p]) => {
             players[pid] = {
@@ -522,7 +527,7 @@ class CoreService {
             players
           }];
         })),
-        PlayerInfo: Object.fromEntries(Object.entries(this.PlayersInfo || {}).map(([pid, nickname]) => [
+        playersInfo: Object.fromEntries(Object.entries(this.PlayersInfo || {}).map(([pid, nickname]) => [
           pid, 
           typeof nickname === 'string' ? nickname : (nickname._id || nickname.name || 'Unknown Player')
         ])),
@@ -560,8 +565,10 @@ class CoreService {
   async saveViaREST(data, accessKey) {
     try {
       console.log('Using REST API fallback');
+      console.log('Data being sent:', data);
       
-      const url = `${atob(STATS.BATTLE)}${accessKey}`;
+      // Виправлений URL згідно з серверним маршрутом
+      const url = `${atob(STATS.BATTLE)}update/${accessKey}`;
       
       const response = await fetch(url, {
         method: 'POST',
@@ -571,24 +578,22 @@ class CoreService {
         },
         body: JSON.stringify(data)
       });
-      
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          console.log('Data saved successfully via REST API');
-        }
-        return true;
-      } else {
-        const errorText = await response.text();
-        console.error('REST API error:', response.status, response.statusText, errorText);
-        return false;
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    } catch (e) {
-      console.error('REST API exception:', e);
-      return false;
+
+      const result = await response.json();
+      if (result.success) {
+        console.log('Data saved successfully via REST API');
+      } else {
+        throw new Error(result.message || 'Failed to save data');
+      }
+    } catch (error) {
+      console.error('Error saving data via REST:', error);
+      throw error;
     }
   }
-
 
   async loadFromServer() {
     const accessKey = this.getAccessKey();
@@ -672,7 +677,10 @@ class CoreService {
       return;
     }
 
+    console.log('Starting to clear server data...');
+
     if (this.socket && this.socket.connected) {
+      console.log('Clearing data via WebSocket...');
       this.socket.emit('clearStats', { key: accessKey }, (response) => {
         if (response && response.status === 200) {
           this.BattleStats = {};
@@ -689,9 +697,10 @@ class CoreService {
 
     try {
       console.log('Attempting to clear data via REST API...');
+      // Виправлений URL згідно з серверним маршрутом
       const url = `${atob(STATS.BATTLE)}clear/${accessKey}`;
       const response = await fetch(url, {
-        method: 'GET',
+        method: 'GET', // Сервер очікує GET запит
         headers: {
           'Content-Type': 'application/json'
         }
@@ -760,7 +769,9 @@ class CoreService {
 
   async serverDataSave() {
     try {
+      console.log('Saving data to server...');
       await this.saveToServer();
+      console.log('Data saved to server successfully');
     } catch (error) {
       console.error('Error in serverDataSave:', error);
     }
@@ -768,6 +779,7 @@ class CoreService {
 
   async serverData() {
     try {
+      console.log('Auto-saving data to server (debounced)...');
       const oldStats = JSON.stringify(this.BattleStats);
       await this.saveToServer();
       this.eventsCore.emit('statsUpdated');
