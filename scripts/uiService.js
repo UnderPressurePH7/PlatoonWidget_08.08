@@ -96,6 +96,7 @@ class UIService {
     const totalBattlePoints = this.core.calculateBattleData();
     
     const battleStats = this.core.findBestAndWorstBattle();
+    console.log('Battle Stats from core:', battleStats);
     
     this.updateElement('best-battle', battleStats.bestBattle?.points?.toLocaleString() || '0');
     this.updateElement('worst-battle', battleStats.worstBattle?.points?.toLocaleString() || '0');

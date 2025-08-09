@@ -312,13 +312,19 @@ class CoreService {
       ...battle
     }));
 
+    console.log('findBestAndWorstBattle: Total battles:', allBattles.length);
+    console.log('BattleStats:', this.BattleStats);
+
     if (!allBattles || allBattles.length === 0) {
+      console.log('No battles found');
       return { bestBattle: null, worstBattle: null };
     }
 
     const completedBattles = allBattles.filter(battle => battle.win !== -1);
+    console.log('Completed battles:', completedBattles.length);
 
     if (completedBattles.length === 0) {
+      console.log('No completed battles found');
       return { bestBattle: null, worstBattle: null };
     }
 
@@ -346,10 +352,16 @@ class CoreService {
         }
       });
 
-      return {
+      const result = {
         bestBattle: { battle: bestBattle, points: bestBattlePoints },
         worstBattle: { battle: worstBattle, points: worstBattlePoints }
       };
+      
+      console.log('findBestAndWorstBattle result:', result);
+      console.log('Best battle points:', bestBattlePoints);
+      console.log('Worst battle points:', worstBattlePoints);
+      
+      return result;
     } catch (error) {
       console.error('Error when searching for the worst/best battle:', error);
       return { bestBattle: null, worstBattle: null };
