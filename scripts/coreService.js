@@ -643,26 +643,6 @@ class CoreService {
       return;
     }
 
-    console.log('Starting to clear server data...');
-
-    if (this.socket && this.socket.connected) {
-      // Спроба через WebSocket
-      console.log('Attempting to clear data via WebSocket...');
-      this.socket.emit('clearStats', { key: accessKey }, (response) => {
-        if (response.status === 200) {
-          console.log('Data cleared successfully via WebSocket');
-          this.BattleStats = {};
-          this.PlayersInfo = {};
-          this.clearCalculationCache();
-          this.eventsCore.emit('statsUpdated');
-        } else {
-          console.error('Error clearing data via socket:', response.body?.message || 'Unknown error');
-        }
-      });
-      return;
-    }
-
-    // Fallback через REST API (як в оригіналі)
     try {
       console.log('Attempting to clear data via REST API...');
       const url = `${atob(STATS.BATTLE)}clear/${accessKey}`;
