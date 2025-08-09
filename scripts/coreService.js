@@ -578,7 +578,7 @@ class CoreService {
       this.socket.emit('getStats', { key: accessKey }, (response) => {
         if (response.status === 200) {
           this.handleServerData(response.body);
-          //this.clearCalculationCache();
+          this.clearCalculationCache();
           this.eventsCore.emit('statsUpdated');
           this.saveState();
         } else {
@@ -594,7 +594,7 @@ class CoreService {
       if (res.ok) {
         const body = await res.json();
         this.handleServerData({ success: true, ...body });
-        //this.clearCalculationCache();
+        this.clearCalculationCache();
         this.eventsCore.emit('statsUpdated');
         this.saveState();
       }
@@ -611,7 +611,7 @@ class CoreService {
       this.socket.emit('getOtherPlayersStats', { key: accessKey, playerId: this.curentPlayerId }, (response) => {
         if (response.status === 200) {
           this.handleServerData(response.body);
-          //this.clearCalculationCache();
+          this.clearCalculationCache();
           this.eventsCore.emit('statsUpdated');
           this.saveState();
         } else {
@@ -627,7 +627,7 @@ class CoreService {
       if (res.ok) {
         const body = await res.json();
         this.handleServerData({ success: true, ...body });
-        //this.clearCalculationCache();
+        this.clearCalculationCache();
         this.eventsCore.emit('statsUpdated');
         this.saveState();
       }
@@ -763,7 +763,7 @@ class CoreService {
     if (!this.PlayersInfo[this.curentPlayerId]) {
       this.PlayersInfo[this.curentPlayerId] = this.sdk.data.player.name.value;
     }
-      //this.clearCalculationCache();
+      this.clearCalculationCache();
       this.serverDataDebounced();
   }
    
@@ -829,8 +829,8 @@ class CoreService {
       this.BattleStats[arenaId].players[playerId].points += damageData.damage * GAME_POINTS.POINTS_PER_DAMAGE;
       
       console.log(`Updated player stats:`, this.BattleStats[arenaId].players[playerId]);
-      
-      //this.clearCalculationCache();
+
+      this.clearCalculationCache();
       console.log('Calling serverDataDebounced after damage');
       this.serverDataDebounced();
     }
@@ -852,8 +852,8 @@ class CoreService {
       this.BattleStats[arenaId].players[playerId].points += GAME_POINTS.POINTS_PER_FRAG;
       
       console.log(`Updated player stats after kill:`, this.BattleStats[arenaId].players[playerId]);
-      
-      //this.clearCalculationCache();
+
+      this.clearCalculationCache();
       console.log('Calling serverDataDebounced after kill');
       this.serverDataDebounced();
     }
@@ -900,7 +900,7 @@ class CoreService {
       }
     }
 
-    //this.clearCalculationCache();
+    this.clearCalculationCache();
     await Utils.getRandomDelay();
     
     // Перевірка чи існує запис гравця перед відправкою на сервер
