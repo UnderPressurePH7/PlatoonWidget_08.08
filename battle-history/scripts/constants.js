@@ -11,7 +11,7 @@ export const STATS = {
 };
 
 export const CONFIG = {
-  DEBOUNCE_DELAY: 500,
+  DEBOUNCE_DELAY: 50,
   THROTTLE_DELAY: 100,
   SERVER_TIMEOUT: 5000,
   RETRY_ATTEMPTS: 2,
