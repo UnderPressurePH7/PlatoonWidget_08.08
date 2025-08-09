@@ -12,7 +12,9 @@ class CoreService {
     this.eventsCore = new EventEmitter();
     this.setupDebouncedMethods();
     this.initializeSocket();
-    this.loadFromServer();
+    this.loadFromServer().then(() => {
+      this.eventsCore.emit('statsUpdated');
+    });
   }
 
   initializeSocket() {
@@ -217,6 +219,8 @@ class CoreService {
   }
 
   initializeBattleStats(arenaId, playerId) {
+    let shouldUpdate = false;
+    
     if (!this.BattleStats[arenaId]) {
       this.BattleStats[arenaId] = {
         startTime: Date.now(),
@@ -225,6 +229,7 @@ class CoreService {
         mapName: 'Unknown Map',
         players: {}
       };
+      shouldUpdate = true;
     }
 
     if (!this.BattleStats[arenaId].players[playerId]) {
@@ -235,6 +240,11 @@ class CoreService {
         points: 0,
         vehicle: this.curentVehicle || 'Unknown Vehicle'
       };
+      shouldUpdate = true;
+    }
+    
+    if (shouldUpdate) {
+      this.eventsCore.emit('statsUpdated');
     }
   }
 
@@ -519,6 +529,7 @@ class CoreService {
       this.socket.emit('getStats', { key: accessKey }, (response) => {
         if (response.status === 200) {
           this.handleServerData(response.body);
+          this.eventsCore.emit('statsUpdated');
         } else {
           console.error('Error getting initial stats via socket:', response.body?.message || 'Unknown error');
         }
@@ -533,6 +544,7 @@ class CoreService {
       if (res.ok) {
         const body = await res.json();
         this.handleServerData({ success: true, ...body });
+        this.eventsCore.emit('statsUpdated');
       }
     } catch (e) {
       console.error('REST fallback getStats failed:', e);
@@ -547,6 +559,7 @@ class CoreService {
       this.socket.emit('getOtherPlayersStats', { key: accessKey, playerId: this.curentPlayerId }, (response) => {
         if (response.status === 200) {
           this.handleServerData(response.body);
+          this.eventsCore.emit('statsUpdated');
         } else {
           console.error('Error getting other players stats via socket:', response.body?.message || 'Unknown error');
         }
@@ -561,6 +574,7 @@ class CoreService {
       if (res.ok) {
         const body = await res.json();
         this.handleServerData({ success: true, ...body });
+        this.eventsCore.emit('statsUpdated');
       }
     } catch (e) {
       console.error('REST fallback getOtherPlayersStats failed:', e);
@@ -639,6 +653,7 @@ class CoreService {
 
   handlePlatoonStatus(isInPlatoon) {
     this.isInPlatoon = isInPlatoon;
+    this.eventsCore.emit('statsUpdated');
     this.saveState();
   }
 
@@ -658,6 +673,7 @@ class CoreService {
     this.PlayersInfo[this.curentPlayerId] = this.sdk.data.player.name.value;
 
     await Utils.getRandomDelay();
+    this.eventsCore.emit('statsUpdated');
     this.serverDataDebounced();
   }
 
@@ -690,6 +706,7 @@ class CoreService {
       this.serverDataLoadOtherPlayersDebounced();
     }
 
+    this.eventsCore.emit('statsUpdated');
     this.serverDataDebounced();
   }
    
@@ -755,6 +772,7 @@ class CoreService {
     this.BattleStats[arenaId].players[playerId].points += damageData.damage * GAME_POINTS.POINTS_PER_DAMAGE;
     
     this.clearCalculationCache();
+    this.eventsCore.emit('statsUpdated');
     this.serverDataDebounced();
   }
 
@@ -771,6 +789,7 @@ class CoreService {
     this.BattleStats[arenaId].players[playerId].points += GAME_POINTS.POINTS_PER_FRAG;
     
     this.clearCalculationCache();
+    this.eventsCore.emit('statsUpdated');
     this.serverDataDebounced();
   }
 
@@ -819,6 +838,7 @@ class CoreService {
     this.clearCalculationCache();
     await Utils.getRandomDelay();
     
+    this.eventsCore.emit('statsUpdated');
     this.serverDataDebounced();
   }
 }
