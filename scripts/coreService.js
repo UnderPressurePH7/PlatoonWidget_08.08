@@ -52,7 +52,7 @@ class CoreService {
           if (data.data) {
             this.handleServerData(data.data);
           } else {
-            this.loadUpdatedStats();
+            this.loadFromServer();
           }
         }
       });
@@ -128,9 +128,6 @@ class CoreService {
         });
         this.PlayersInfo = normalizedPlayerInfo;
       }
-      this.clearCalculationCache();
-      this.eventsCore.emit('statsUpdated');
-      this.saveState();
     }
   }
 
@@ -525,7 +522,9 @@ class CoreService {
       this.socket.emit('getStats', { key: accessKey }, (response) => {
         if (response.status === 200) {
           this.handleServerData(response.body);
+          this.clearCalculationCache();
           this.eventsCore.emit('statsUpdated');
+          this.saveState();
         } else {
           console.error('Error getting initial stats via socket:', response.body?.message || 'Unknown error');
         }
@@ -539,7 +538,9 @@ class CoreService {
       if (res.ok) {
         const body = await res.json();
         this.handleServerData({ success: true, ...body });
+        this.clearCalculationCache();
         this.eventsCore.emit('statsUpdated');
+        this.saveState();
       }
     } catch (e) {
       console.error('REST fallback getStats failed:', e);
@@ -554,7 +555,9 @@ class CoreService {
       this.socket.emit('getOtherPlayersStats', { key: accessKey, playerId: this.curentPlayerId }, (response) => {
         if (response.status === 200) {
           this.handleServerData(response.body);
+          this.clearCalculationCache();
           this.eventsCore.emit('statsUpdated');
+          this.saveState();
         } else {
           console.error('Error getting other players stats via socket:', response.body?.message || 'Unknown error');
         }
@@ -568,7 +571,9 @@ class CoreService {
       if (res.ok) {
         const body = await res.json();
         this.handleServerData({ success: true, ...body });
+        this.clearCalculationCache();
         this.eventsCore.emit('statsUpdated');
+        this.saveState();
       }
     } catch (e) {
       console.error('REST fallback getOtherPlayersStats failed:', e);
@@ -591,15 +596,6 @@ class CoreService {
         console.error('Error clearing data via socket:', response.body.message);
       }
     });
-  }
-
-  async loadUpdatedStats() {
-    try {
-      await this.loadFromServer();
-      this.eventsCore.emit('statsUpdated');
-    } catch (error) {
-      console.error('Error in loadUpdatedStats:', error);
-    }
   }
 
   async refreshData() {
