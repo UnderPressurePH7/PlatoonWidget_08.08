@@ -682,7 +682,7 @@ class CoreService {
 
     this.PlayersInfo[this.curentPlayerId] = this.sdk.data.player.name.value;
 
-    await Utils.getRandomDelay();
+    //await Utils.getRandomDelay();
     this.serverDataDebounced();
   }
 
