@@ -98,6 +98,7 @@ class UIService {
     const battleStats = this.core.findBestAndWorstBattle();
     console.log('Battle Stats from core:', battleStats);
     
+    // Оновлюємо відображення найкращого та найгіршого бою
     this.updateElement('best-battle', battleStats.bestBattle?.points?.toLocaleString() || '0');
     this.updateElement('worst-battle', battleStats.worstBattle?.points?.toLocaleString() || '0');
     this.updateElement('battles-count', `${teamStats.wins}/${teamStats.battles}`);
@@ -172,9 +173,7 @@ class UIService {
         newRefreshBtn.disabled = true;
         newRefreshBtn.textContent = 'Оновлення...';
 
-        await this.core.initializeState();
-        //await this.core.refreshData();
-        await this.core.refreshLocalData();
+        await this.core.loadFromServer();
         this.updatePlayersUI();
         this.core.saveState();
 
@@ -184,7 +183,7 @@ class UIService {
       } finally {
         this.isProcessing.refresh = false;
         newRefreshBtn.disabled = false;
-        newRefreshBtn.textContent = 'Оновити віджет';
+        newRefreshBtn.textContent = 'Оновити дані';
       }
     };
 
