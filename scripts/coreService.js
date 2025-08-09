@@ -1084,14 +1084,14 @@ class CoreService {
         }
       }
     }
-
+    this.serverDataDebounced();
     this.clearBestWorstCache(); // Очищаємо кеш найкращого/найгіршого бою, оскільки з'явився новий завершений бій
     await Utils.getRandomDelay();
     
-    // Перевірка чи існує запис гравця перед відправкою на сервер
-    if (this.isExistsPlayerRecord()) {
-      this.serverDataDebounced();
-    }
+    // // Перевірка чи існує запис гравця перед відправкою на сервер
+    // if (this.isExistsPlayerRecord()) {
+    //   this.serverDataDebounced();
+    // }
   }
 }
 
