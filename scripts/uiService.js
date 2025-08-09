@@ -162,12 +162,9 @@ class UIService {
       event.stopPropagation();
       event.stopImmediatePropagation();
 
-      if (this.isProcessing.refresh) {
-        // console.log('Refresh already in progress');
-        return;
-      }
-
-      try {
+    if (this.isProcessing.refresh) {
+      return;
+    }      try {
         this.isProcessing.refresh = true;
         newRefreshBtn.disabled = true;
         newRefreshBtn.textContent = 'Оновлення...';
@@ -202,7 +199,6 @@ class UIService {
       event.stopImmediatePropagation();
 
       if (this.isProcessing.removeHistory) {
-        console.log('Remove history already in progress');
         return;
       }
 

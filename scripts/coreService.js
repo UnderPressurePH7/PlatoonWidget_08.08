@@ -52,7 +52,6 @@ class CoreService {
       });
 
       this.socket.on('disconnect', (reason) => {
-        console.log('Socket disconnected:', reason);
       });
 
       this.socket.on('connect_error', (error) => {
@@ -78,10 +77,8 @@ class CoreService {
   handleServerData(data) {
     if (data.success) {
       if (data.BattleStats) {
-        // Unwrap server payload from _id structure to widget's expected shape
         const normalized = {};
         Object.entries(data.BattleStats).forEach(([arenaId, battleWrapper]) => {
-          // Handle both wrapped (_id structure) and unwrapped data
           const battle = (battleWrapper && typeof battleWrapper === 'object' && battleWrapper._id) 
             ? battleWrapper._id 
             : battleWrapper;
@@ -89,7 +86,6 @@ class CoreService {
           const players = {};
           const rawPlayers = battle?.players || {};
           Object.entries(rawPlayers).forEach(([pid, playerWrapper]) => {
-            // Handle both wrapped (_id structure) and unwrapped player data
             const p = (playerWrapper && typeof playerWrapper === 'object' && playerWrapper._id) 
               ? playerWrapper._id 
               : playerWrapper;
@@ -116,7 +112,6 @@ class CoreService {
         this.BattleStats = normalized;
       }
       if (data.PlayerInfo) {
-        // Unwrap PlayerInfo from _id structure if needed
         const normalizedPlayerInfo = {};
         Object.entries(data.PlayerInfo).forEach(([playerId, playerWrapper]) => {
           if (typeof playerWrapper === 'object' && playerWrapper._id) {
@@ -439,7 +434,6 @@ class CoreService {
       key: accessKey,
       playerId: this.curentPlayerId,
       body: {
-        // Format data according to server schema with _id wrapper
         BattleStats: Object.fromEntries(Object.entries(this.BattleStats || {}).map(([arenaId, battle]) => {
           const players = {};
           Object.entries(battle.players || {}).forEach(([pid, p]) => {
@@ -468,7 +462,6 @@ class CoreService {
       }
     };
     
-    // Try WebSocket first with timeout fallback to REST
     if (this.socket && this.socket.connected) {
       let saveCallbackReceived = false;
       let fallbackUsed = false;
@@ -482,7 +475,6 @@ class CoreService {
         }
       });
       
-      // Fallback to REST if no response in 3 seconds
       setTimeout(async () => {
         if (!saveCallbackReceived && !fallbackUsed) {
           fallbackUsed = true;
@@ -492,8 +484,6 @@ class CoreService {
       
       return;
     }
-
-    // Direct REST if WebSocket unavailable
     await this.saveViaREST(dataToSend.body, accessKey);
   }
 
@@ -537,7 +527,6 @@ class CoreService {
       return;
     }
 
-    // REST fallback
     try {
       const url = `${atob(STATS.BATTLE)}${accessKey}`;
       const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
@@ -567,7 +556,6 @@ class CoreService {
       return;
     }
 
-    // REST fallback
     try {
       const url = `${atob(STATS.BATTLE)}pid/${accessKey}`;
       const res = await fetch(url, { headers: { 'Content-Type': 'application/json', 'X-Player-ID': this.curentPlayerId || '' } });
@@ -642,7 +630,6 @@ class CoreService {
     try {
       const oldStats = JSON.stringify(this.BattleStats);
       await this.saveToServer();
-      // Завжди оновлюємо UI після збереження даних
       this.eventsCore.emit('statsUpdated');
       if (this.isDataChanged(this.BattleStats, JSON.parse(oldStats))) {
         this.saveState();
@@ -690,29 +677,26 @@ class CoreService {
     if (this.curentArenaId == null) return;
     if (this.curentPlayerId == null) return;
 
-    // Завжди ініціалізуємо статистику бою для поточного гравця
     this.initializeBattleStats(this.curentArenaId, this.curentPlayerId);
 
     this.BattleStats[this.curentArenaId].mapName = arenaData.localizedName || 'Unknown Map';
     this.BattleStats[this.curentArenaId].players[this.curentPlayerId].vehicle = this.curentVehicle;
     this.BattleStats[this.curentArenaId].players[this.curentPlayerId].name = this.sdk.data.player.name.value;
 
-    // Додаємо гравця до PlayersInfo якщо його там немає
     if (!this.PlayersInfo[this.curentPlayerId]) {
       this.PlayersInfo[this.curentPlayerId] = this.sdk.data.player.name.value;
     }
 
     if (this.isExistsPlayerRecord()) {
       this.serverDataLoadOtherPlayersDebounced();
+    } else {
+      this.serverDataDebounced();
     }
-
-    this.serverDataDebounced();
   }
    
   async handleisInBattle(isInBattle) {
     this.isInBattle = isInBattle;
     await Utils.getRandomDelay();
-    // await this.refreshLocalData(); // TESTING
   }
 
   handlePeriod(period) {
@@ -725,11 +709,9 @@ class CoreService {
   }
 
   async handleServerTime(serverTime) {
-    // No longer needed with websockets
   }
 
   handleOnAnyDamage(onDamageData) {
-    // No longer needed with websockets
   }
 
   handlePlayerFeedback(feedback) {
@@ -764,7 +746,6 @@ class CoreService {
     const arenaId = this.curentArenaId;
     const playerId = this.curentPlayerId;
     
-    // Ініціалізуємо статистику якщо її немає
     this.initializeBattleStats(arenaId, playerId);
     
     this.BattleStats[arenaId].players[playerId].damage += damageData.damage;
@@ -780,7 +761,6 @@ class CoreService {
     const arenaId = this.curentArenaId;
     const playerId = this.curentPlayerId;
     
-    // Ініціалізуємо статистику якщо її немає
     this.initializeBattleStats(arenaId, playerId);
     
     this.BattleStats[arenaId].players[playerId].kills += 1;
@@ -801,7 +781,6 @@ class CoreService {
 
     this.curentPlayerId = result.personal.avatar.accountDBID;
     
-    // Ініціалізуємо статистику якщо її немає
     this.initializeBattleStats(arenaId, this.curentPlayerId);
     
     this.BattleStats[arenaId].duration = result.common.duration;

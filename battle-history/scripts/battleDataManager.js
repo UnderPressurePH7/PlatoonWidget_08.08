@@ -124,7 +124,6 @@ class BattleDataManager {
         throw new Error('Access key not found');
       }
 
-      // Format data according to server schema with _id wrapper
       const formattedBattleStats = Object.fromEntries(Object.entries(this.BattleStats || {}).map(([arenaId, battle]) => {
         const players = {};
         Object.entries(battle.players || {}).forEach(([pid, p]) => {
@@ -177,10 +176,8 @@ class BattleDataManager {
 
       if (data.success) {
         if (data.BattleStats) {
-          // Unwrap server payload from _id structure
           const normalized = {};
           Object.entries(data.BattleStats).forEach(([arenaId, battleWrapper]) => {
-            // Handle both wrapped (_id structure) and unwrapped data
             const battle = (battleWrapper && typeof battleWrapper === 'object' && battleWrapper._id) 
               ? battleWrapper._id 
               : battleWrapper;
@@ -188,7 +185,6 @@ class BattleDataManager {
             const players = {};
             const rawPlayers = battle?.players || {};
             Object.entries(rawPlayers).forEach(([pid, playerWrapper]) => {
-              // Handle both wrapped (_id structure) and unwrapped player data
               const p = (playerWrapper && typeof playerWrapper === 'object' && playerWrapper._id) 
                 ? playerWrapper._id 
                 : playerWrapper;
@@ -215,7 +211,6 @@ class BattleDataManager {
           this.BattleStats = normalized;
         }
         if (data.PlayerInfo) {
-          // Unwrap PlayerInfo from _id structure if needed
           const normalizedPlayerInfo = {};
           Object.entries(data.PlayerInfo).forEach(([playerId, playerWrapper]) => {
             if (typeof playerWrapper === 'object' && playerWrapper._id) {
@@ -259,11 +254,6 @@ class BattleDataManager {
       });
 
       await this.refreshLocalData();
-
-      // if (this.BattleStats[battleId]) {
-      //   delete this.BattleStats[battleId];
-      //   this.saveState();
-      // }
 
       this.eventsHistory.emit('battleDeleted', battleId);
       return true;
