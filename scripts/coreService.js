@@ -55,9 +55,12 @@ class CoreService {
       });
 
       this.socket.on('statsUpdated', (data) => {
+        console.log('Received statsUpdated event:', data);
         if (data && data.key === accessKey) {
+          // Завантажуємо оновлені дані з сервера
           this.socket.emit('getStats', { key: accessKey }, (response) => {
             if (response && response.status === 200) {
+              console.log('Stats updated from server:', response.body);
               this.handleServerData(response.body);
               this.clearCalculationCache();
               this.eventsCore.emit('statsUpdated');
@@ -908,6 +911,9 @@ class CoreService {
     const arenaId = this.curentArenaId;
     const playerId = this.curentPlayerId;
     
+    console.log(`Handling damage: ${damageData.damage} for player ${playerId} in arena ${arenaId}`);
+    console.log('Damage data:', damageData);
+    
     // Перевірка чи існує запис гравця
     if (this.isExistsPlayerRecord()) {
       this.initializeBattleStats(arenaId, playerId);
@@ -917,9 +923,15 @@ class CoreService {
       
       this.BattleStats[arenaId].players[playerId].damage = newDamage;
       this.BattleStats[arenaId].players[playerId].points += damageData.damage * GAME_POINTS.POINTS_PER_DAMAGE;
+      
+      console.log(`Updated player stats:`, this.BattleStats[arenaId].players[playerId]);
+      console.log(`Total damage now: ${newDamage} (was: ${currentDamage})`);
 
       this.clearCalculationCache();
+      console.log('Calling serverDataDebounced after damage');
       this.serverDataDebounced();
+    } else {
+      console.log('Player record does not exist, skipping damage handling');
     }
   }
 
@@ -929,6 +941,9 @@ class CoreService {
     const arenaId = this.curentArenaId;
     const playerId = this.curentPlayerId;
     
+    console.log(`Handling kill for player ${playerId} in arena ${arenaId}`);
+    console.log('Kill data:', killData);
+    
     // Перевірка чи існує запис гравця
     if (this.isExistsPlayerRecord()) {
       this.initializeBattleStats(arenaId, playerId);
@@ -937,9 +952,15 @@ class CoreService {
       
       this.BattleStats[arenaId].players[playerId].kills = currentKills + 1;
       this.BattleStats[arenaId].players[playerId].points += GAME_POINTS.POINTS_PER_FRAG;
+      
+      console.log(`Updated player stats after kill:`, this.BattleStats[arenaId].players[playerId]);
+      console.log(`Total kills now: ${currentKills + 1} (was: ${currentKills})`);
 
       this.clearCalculationCache();
+      console.log('Calling serverDataDebounced after kill');
       this.serverDataDebounced();
+    } else {
+      console.log('Player record does not exist, skipping kill handling');
     }
   }
 
@@ -954,10 +975,14 @@ class CoreService {
 
     this.curentPlayerId = result.personal.avatar.accountDBID;
     
+    console.log('Processing battle result for arena:', arenaId);
+    console.log('Current player ID:', this.curentPlayerId);
+    
     if (result.players) {
       Object.entries(result.players).forEach(([playerId, playerData]) => {
         if (playerData.name && !this.PlayersInfo[playerId]) {
           this.PlayersInfo[playerId] = playerData.name;
+          console.log(`Added player to PlayerInfo: ${playerId} -> ${playerData.name}`);
         }
       });
     }
@@ -997,6 +1022,7 @@ class CoreService {
             playerStats.vehicle = vehicle.vehicleName || vehicle.typeCompDescr || 'Unknown Vehicle';
           }
           
+          console.log('Updated player stats from battle result:', playerStats);
           break;
         }
       }
