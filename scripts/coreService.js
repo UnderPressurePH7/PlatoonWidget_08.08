@@ -102,7 +102,7 @@ class CoreService {
             // Обробляємо дані гравця - сервер може повертати або пряму структуру, або обгорнуту в _id
             const p = (playerData && typeof playerData === 'object' && playerData._id) ? playerData._id : playerData;
             
-            const kills = (typeof p.kills === 'number') ? p.kills : (typeof p.frags === 'number' ? p.frags : 0);
+            const kills = typeof p.kills === 'number' ? p.kills : 0;
             const damage = typeof p.damage === 'number' ? p.damage : 0;
             const points = typeof p.points === 'number' ? p.points : (damage + kills * GAME_POINTS.POINTS_PER_FRAG);
             

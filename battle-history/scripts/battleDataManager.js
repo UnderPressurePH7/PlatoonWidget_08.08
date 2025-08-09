@@ -132,7 +132,6 @@ class BattleDataManager {
               name: p.name || 'Unknown Player',
               damage: p.damage || 0,
               kills: p.kills || 0,
-              frags: typeof p.kills === 'number' ? p.kills : (typeof p.frags === 'number' ? p.frags : 0),
               points: p.points || 0,
               vehicle: p.vehicle || 'Unknown Vehicle'
             }
@@ -189,7 +188,7 @@ class BattleDataManager {
                 ? playerWrapper._id 
                 : playerWrapper;
               
-              const kills = (typeof p.kills === 'number') ? p.kills : (typeof p.frags === 'number' ? p.frags : 0);
+              const kills = typeof p.kills === 'number' ? p.kills : 0;
               const damage = typeof p.damage === 'number' ? p.damage : 0;
               const points = typeof p.points === 'number' ? p.points : (damage + kills * GAME_POINTS.POINTS_PER_FRAG);
               players[pid] = {
