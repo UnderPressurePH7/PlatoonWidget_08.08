@@ -103,12 +103,12 @@ class CoreService {
             // Перевірка чи існують локальні дані для цього гравця в цій арені
             const existingPlayer = this.BattleStats?.[arenaId]?.players?.[pid];
             if (existingPlayer) {
-              // Якщо локальні дані більші, зберігаємо їх
+              // Серверні дані перезаписують локальні тільки якщо вони більші
               players[pid] = {
                 name: p.name || existingPlayer.name || this.PlayersInfo?.[pid] || 'Unknown Player',
-                damage: Math.max(damage, existingPlayer.damage || 0),
-                kills: Math.max(kills, existingPlayer.kills || 0),
-                points: Math.max(points, existingPlayer.points || 0),
+                damage: Math.max(damage || 0, existingPlayer.damage || 0),
+                kills: Math.max(kills || 0, existingPlayer.kills || 0),
+                points: Math.max(points || 0, existingPlayer.points || 0),
                 vehicle: p.vehicle || existingPlayer.vehicle || 'Unknown Vehicle'
               };
             } else {
@@ -821,16 +821,19 @@ class CoreService {
     
     console.log(`Handling damage: ${damageData.damage} for player ${playerId} in arena ${arenaId}`);
     
-    this.initializeBattleStats(arenaId, playerId);
-    
-    this.BattleStats[arenaId].players[playerId].damage += damageData.damage;
-    this.BattleStats[arenaId].players[playerId].points += damageData.damage * GAME_POINTS.POINTS_PER_DAMAGE;
-    
-    console.log(`Updated player stats:`, this.BattleStats[arenaId].players[playerId]);
-    
-    //this.clearCalculationCache();
-    console.log('Calling serverDataDebounced after damage');
-    this.serverDataDebounced();
+    // Перевірка чи існує запис гравця
+    if (this.isExistsPlayerRecord()) {
+      this.initializeBattleStats(arenaId, playerId);
+      
+      this.BattleStats[arenaId].players[playerId].damage += damageData.damage;
+      this.BattleStats[arenaId].players[playerId].points += damageData.damage * GAME_POINTS.POINTS_PER_DAMAGE;
+      
+      console.log(`Updated player stats:`, this.BattleStats[arenaId].players[playerId]);
+      
+      //this.clearCalculationCache();
+      console.log('Calling serverDataDebounced after damage');
+      this.serverDataDebounced();
+    }
   }
 
   handlePlayerKill(killData) {
@@ -841,16 +844,19 @@ class CoreService {
     
     console.log(`Handling kill for player ${playerId} in arena ${arenaId}`);
     
-    this.initializeBattleStats(arenaId, playerId);
-    
-    this.BattleStats[arenaId].players[playerId].kills += 1;
-    this.BattleStats[arenaId].players[playerId].points += GAME_POINTS.POINTS_PER_FRAG;
-    
-    console.log(`Updated player stats after kill:`, this.BattleStats[arenaId].players[playerId]);
-    
-    //this.clearCalculationCache();
-    console.log('Calling serverDataDebounced after kill');
-    this.serverDataDebounced();
+    // Перевірка чи існує запис гравця
+    if (this.isExistsPlayerRecord()) {
+      this.initializeBattleStats(arenaId, playerId);
+      
+      this.BattleStats[arenaId].players[playerId].kills += 1;
+      this.BattleStats[arenaId].players[playerId].points += GAME_POINTS.POINTS_PER_FRAG;
+      
+      console.log(`Updated player stats after kill:`, this.BattleStats[arenaId].players[playerId]);
+      
+      //this.clearCalculationCache();
+      console.log('Calling serverDataDebounced after kill');
+      this.serverDataDebounced();
+    }
   }
 
   async handleBattleResult(result) {
@@ -897,7 +903,10 @@ class CoreService {
     //this.clearCalculationCache();
     await Utils.getRandomDelay();
     
-    this.serverDataDebounced();
+    // Перевірка чи існує запис гравця перед відправкою на сервер
+    if (this.isExistsPlayerRecord()) {
+      this.serverDataDebounced();
+    }
   }
 }
 
