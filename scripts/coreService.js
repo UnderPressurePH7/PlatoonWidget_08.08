@@ -53,7 +53,6 @@ class CoreService {
 
       this.socket.on('statsUpdated', (data) => {
         if (data && data.key === accessKey) {
-          // Завантажуємо оновлені дані з сервера
           this.socket.emit('getStats', { key: accessKey }, (response) => {
             if (response && response.status === 200) {
               this.handleServerData(response.body);
@@ -267,9 +266,7 @@ class CoreService {
     }
 
     if (!this.BattleStats[arenaId].players[playerId]) {
-      // Переконуємося, що у нас є інформація про гравця в PlayerInfo
       if (!this.PlayersInfo[playerId] && playerId === this.curentPlayerId) {
-        // Якщо це поточний гравець і ми не знаємо його імені, спробуємо отримати з SDK
         try {
           const playerName = this.sdk?.data?.player?.name?.value || 'Unknown Player';
           this.PlayersInfo[playerId] = playerName;
@@ -488,7 +485,6 @@ class CoreService {
 
     if (!hasPlayerData) {
       console.log('No player data to save, but continuing to preserve structure');
-      // Не блокуємо відправку - можливо потрібно зберегти структуру арени
     }
 
     const dataToSend = {
@@ -502,7 +498,6 @@ class CoreService {
               name: p.name || 'Unknown Player',
               damage: p.damage || 0,
               kills: p.kills || 0,
-              frags: p.kills || 0, // Сервер використовує frags
               points: p.points || 0,
               vehicle: p.vehicle || 'Unknown Vehicle'
             };
@@ -921,7 +916,6 @@ class CoreService {
 
     this.curentPlayerId = result.personal.avatar.accountDBID;
     
-    // Збираємо інформацію про всіх гравців для PlayerInfo
     if (result.players) {
       Object.entries(result.players).forEach(([playerId, playerData]) => {
         if (playerData.name && !this.PlayersInfo[playerId]) {
@@ -934,7 +928,6 @@ class CoreService {
     
     this.BattleStats[arenaId].duration = result.common.duration;
 
-    // Встановлюємо назву карти, якщо доступна
     if (result.common.arenaTag) {
       this.BattleStats[arenaId].mapName = result.common.arenaTag;
     }
