@@ -162,9 +162,11 @@ class UIService {
       event.stopPropagation();
       event.stopImmediatePropagation();
 
-    if (this.isProcessing.refresh) {
-      return;
-    }      try {
+      if (this.isProcessing.refresh) {
+        return;
+      }
+
+      try {
         this.isProcessing.refresh = true;
         newRefreshBtn.disabled = true;
         newRefreshBtn.textContent = 'Оновлення...';
@@ -179,7 +181,7 @@ class UIService {
       } finally {
         this.isProcessing.refresh = false;
         newRefreshBtn.disabled = false;
-        newRefreshBtn.textContent = 'Оновити дані';
+        newRefreshBtn.textContent = 'Оновити віджет';
       }
     };
 

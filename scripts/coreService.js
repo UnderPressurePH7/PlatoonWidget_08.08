@@ -602,6 +602,16 @@ class CoreService {
     }
   }
 
+  async refreshData() {
+    try {
+      await this.loadFromServer();
+      this.eventsCore.emit('statsUpdated');
+      this.saveState();
+    } catch (error) {
+      console.error('Error in refreshData:', error);
+    }
+  }
+
   async refreshLocalData() {
     this.clearState();
     await Utils.sleep(10);
