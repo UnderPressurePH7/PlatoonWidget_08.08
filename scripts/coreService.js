@@ -174,6 +174,9 @@ class CoreService {
         });
         this.PlayersInfo = normalizedPlayerInfo;
       }
+      
+      // Очищаємо кеш найкращого/найгіршого бою після завантаження даних з сервера
+      this.clearBestWorstCache();
     }
   }
 
@@ -242,6 +245,31 @@ class CoreService {
 
   clearCalculationCache() {
     this.calculationCache.clear();
+  }
+
+  // Очищаємо тільки кеш поточного бою, зберігаючи кеш найкращого/найгіршого
+  clearCurrentBattleCache() {
+    // Видаляємо тільки кеші поточного бою
+    const keysToDelete = [];
+    for (const key of this.calculationCache.keys()) {
+      if (key.startsWith(`battle_${this.curentArenaId}`) || 
+          key.startsWith(`player_`) || 
+          key.startsWith('total_')) {
+        keysToDelete.push(key);
+      }
+    }
+    keysToDelete.forEach(key => this.calculationCache.delete(key));
+  }
+
+  // Очищаємо кеш найкращого/найгіршого бою при зміні завершених боїв  
+  clearBestWorstCache() {
+    const keysToDelete = [];
+    for (const key of this.calculationCache.keys()) {
+      if (key.startsWith('bestWorst_')) {
+        keysToDelete.push(key);
+      }
+    }
+    keysToDelete.forEach(key => this.calculationCache.delete(key));
   }
 
   saveState() {
@@ -318,6 +346,15 @@ class CoreService {
   }
 
   findBestAndWorstBattle() {
+    // Створюємо ключ кешу базований на кількості та id боїв
+    const battleIds = Object.keys(this.BattleStats).sort().join(',');
+    const cacheKey = `bestWorst_${battleIds}_${Object.keys(this.BattleStats).length}`;
+    
+    if (this.calculationCache.has(cacheKey)) {
+      console.log('findBestAndWorstBattle: Using cached result');
+      return this.calculationCache.get(cacheKey);
+    }
+
     const allBattles = Object.entries(this.BattleStats).map(([arenaId, battle]) => ({
       id: arenaId,
       ...battle
@@ -328,7 +365,9 @@ class CoreService {
 
     if (!allBattles || allBattles.length === 0) {
       console.log('No battles found');
-      return { bestBattle: null, worstBattle: null };
+      const result = { bestBattle: null, worstBattle: null };
+      this.calculationCache.set(cacheKey, result);
+      return result;
     }
 
     const completedBattles = allBattles.filter(battle => battle.win !== -1);
@@ -336,7 +375,9 @@ class CoreService {
 
     if (completedBattles.length === 0) {
       console.log('No completed battles found');
-      return { bestBattle: null, worstBattle: null };
+      const result = { bestBattle: null, worstBattle: null };
+      this.calculationCache.set(cacheKey, result);
+      return result;
     }
 
     try {
@@ -372,10 +413,14 @@ class CoreService {
       console.log('Best battle points:', bestBattlePoints);
       console.log('Worst battle points:', worstBattlePoints);
       
+      // Зберігаємо результат в кеші
+      this.calculationCache.set(cacheKey, result);
       return result;
     } catch (error) {
       console.error('Error when searching for the worst/best battle:', error);
-      return { bestBattle: null, worstBattle: null };
+      const result = { bestBattle: null, worstBattle: null };
+      this.calculationCache.set(cacheKey, result);
+      return result;
     }
   }
 
@@ -855,7 +900,7 @@ class CoreService {
     if (!this.PlayersInfo[this.curentPlayerId]) {
       this.PlayersInfo[this.curentPlayerId] = this.sdk.data.player.name.value;
     }
-      this.clearCalculationCache();
+      this.clearCurrentBattleCache();
       this.serverDataDebounced();
   }
    
@@ -1028,7 +1073,7 @@ class CoreService {
       }
     }
 
-    this.clearCalculationCache();
+    this.clearBestWorstCache(); // Очищаємо кеш найкращого/найгіршого бою, оскільки з'явився новий завершений бій
     await Utils.getRandomDelay();
     
     // Перевірка чи існує запис гравця перед відправкою на сервер
