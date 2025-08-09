@@ -642,8 +642,9 @@ class CoreService {
     try {
       const oldStats = JSON.stringify(this.BattleStats);
       await this.saveToServer();
+      // Завжди оновлюємо UI після збереження даних
+      this.eventsCore.emit('statsUpdated');
       if (this.isDataChanged(this.BattleStats, JSON.parse(oldStats))) {
-        this.eventsCore.emit('statsUpdated');
         this.saveState();
       }
     } catch (error) {
@@ -673,7 +674,6 @@ class CoreService {
     this.PlayersInfo[this.curentPlayerId] = this.sdk.data.player.name.value;
 
     await Utils.getRandomDelay();
-    this.eventsCore.emit('statsUpdated');
     this.serverDataDebounced();
   }
 
@@ -706,7 +706,6 @@ class CoreService {
       this.serverDataLoadOtherPlayersDebounced();
     }
 
-    this.eventsCore.emit('statsUpdated');
     this.serverDataDebounced();
   }
    
@@ -772,7 +771,6 @@ class CoreService {
     this.BattleStats[arenaId].players[playerId].points += damageData.damage * GAME_POINTS.POINTS_PER_DAMAGE;
     
     this.clearCalculationCache();
-    this.eventsCore.emit('statsUpdated');
     this.serverDataDebounced();
   }
 
@@ -789,7 +787,6 @@ class CoreService {
     this.BattleStats[arenaId].players[playerId].points += GAME_POINTS.POINTS_PER_FRAG;
     
     this.clearCalculationCache();
-    this.eventsCore.emit('statsUpdated');
     this.serverDataDebounced();
   }
 
@@ -838,7 +835,6 @@ class CoreService {
     this.clearCalculationCache();
     await Utils.getRandomDelay();
     
-    this.eventsCore.emit('statsUpdated');
     this.serverDataDebounced();
   }
 }
