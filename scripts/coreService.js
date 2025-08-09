@@ -514,27 +514,6 @@ class CoreService {
     }
   }
 
-  async fullSyncFromServer() {
-    const accessKey = this.getAccessKey();
-    if (!accessKey) return;
-
-    try {
-      // Спочатку завантажуємо стан з localStorage
-      this.initializeState();
-      
-      // Потім завантажуємо нові дані з сервера та об'єднуємо
-      await this.loadFromServer();
-      
-      // Очищуємо кеш для перерахунку всіх даних
-      this.clearCalculationCache();
-      
-      this.eventsCore.emit('statsUpdated');
-      
-    } catch (error) {
-      console.error('Error during full sync:', error);
-      throw error;
-    }
-  }
 
   async loadFromServer() {
     const accessKey = this.getAccessKey();
@@ -729,12 +708,8 @@ class CoreService {
     if (!this.PlayersInfo[this.curentPlayerId]) {
       this.PlayersInfo[this.curentPlayerId] = this.sdk.data.player.name.value;
     }
-
-    if (this.isExistsPlayerRecord()) {
-      this.serverDataLoadOtherPlayersDebounced();
-    } else {
+      this.clearCalculationCache();
       this.serverDataDebounced();
-    }
   }
    
   async handleisInBattle(isInBattle) {

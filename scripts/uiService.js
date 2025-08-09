@@ -171,7 +171,7 @@ class UIService {
         newRefreshBtn.disabled = true;
         newRefreshBtn.textContent = 'Оновлення...';
 
-        await this.core.fullSyncFromServer();
+        await this.core.refreshLocalData();
         this.updatePlayersUI();
         this.core.saveState();
 
@@ -223,6 +223,7 @@ class UIService {
 
         await this.core.clearServerData();
         this.core.clearState();
+        this.core.clearCalculationCache();
         this.updatePlayersUI();
         
         localStorage.clear();
