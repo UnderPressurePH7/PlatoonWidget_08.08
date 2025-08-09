@@ -219,6 +219,8 @@ class CoreService {
   initializeBattleStats(arenaId, playerId) {
     let shouldUpdate = false;
     
+    console.log(`Initializing battle stats for arena: ${arenaId}, player: ${playerId}`);
+    
     if (!this.BattleStats[arenaId]) {
       this.BattleStats[arenaId] = {
         startTime: Date.now(),
@@ -228,6 +230,7 @@ class CoreService {
         players: {}
       };
       shouldUpdate = true;
+      console.log(`Created new battle entry for arena: ${arenaId}`);
     }
 
     if (!this.BattleStats[arenaId].players[playerId]) {
@@ -239,6 +242,7 @@ class CoreService {
         vehicle: this.curentVehicle || 'Unknown Vehicle'
       };
       shouldUpdate = true;
+      console.log(`Added player ${playerId} to arena ${arenaId}:`, this.BattleStats[arenaId].players[playerId]);
     }
     
     if (shouldUpdate) {
@@ -433,6 +437,21 @@ class CoreService {
       return;
     }
 
+    // Перевіряємо чи є дані для відправки
+    const hasPlayerData = Object.values(this.BattleStats || {}).some(battle => 
+      battle.players && Object.keys(battle.players).length > 0
+    );
+
+    console.log('SaveToServer called:');
+    console.log('- Has player data:', hasPlayerData);
+    console.log('- BattleStats keys:', Object.keys(this.BattleStats || {}));
+    console.log('- Current battle players:', this.curentArenaId ? Object.keys(this.BattleStats[this.curentArenaId]?.players || {}) : 'No current arena');
+
+    if (!hasPlayerData) {
+      console.log('No player data to save, but continuing to preserve structure');
+      // Не блокуємо відправку - можливо потрібно зберегти структуру арени
+    }
+
     const dataToSend = {
       key: accessKey,
       playerId: this.curentPlayerId,
@@ -465,6 +484,8 @@ class CoreService {
       }
     };
     
+    console.log('Data to send to server:', JSON.stringify(dataToSend.body, null, 2));
+    
     if (this.socket && this.socket.connected) {
       let saveCallbackReceived = false;
       let fallbackUsed = false;
@@ -472,6 +493,7 @@ class CoreService {
       this.socket.emit('updateStats', dataToSend, (response) => {
         if (!fallbackUsed) {
           saveCallbackReceived = true;
+          console.log('WebSocket response:', response);
           if (response.status !== 202) {
             console.error('Error updating stats:', response.body?.message || 'Unknown error');
           }
@@ -492,6 +514,9 @@ class CoreService {
 
   async saveViaREST(data, accessKey) {
     try {
+      console.log('Using REST API fallback');
+      console.log('REST data to send:', JSON.stringify(data, null, 2));
+      
       const url = `${atob(STATS.BATTLE)}${accessKey}`;
       const response = await fetch(url, {
         method: 'POST',
@@ -502,7 +527,11 @@ class CoreService {
         body: JSON.stringify(data)
       });
       
+      console.log('REST API response status:', response.status);
+      
       if (response.ok) {
+        const result = await response.json();
+        console.log('REST API response body:', result);
         return true;
       } else {
         console.error('REST API error:', response.status, response.statusText);
@@ -764,12 +793,17 @@ class CoreService {
     const arenaId = this.curentArenaId;
     const playerId = this.curentPlayerId;
     
+    console.log(`Handling damage: ${damageData.damage} for player ${playerId} in arena ${arenaId}`);
+    
     this.initializeBattleStats(arenaId, playerId);
     
     this.BattleStats[arenaId].players[playerId].damage += damageData.damage;
     this.BattleStats[arenaId].players[playerId].points += damageData.damage * GAME_POINTS.POINTS_PER_DAMAGE;
     
+    console.log(`Updated player stats:`, this.BattleStats[arenaId].players[playerId]);
+    
     this.clearCalculationCache();
+    console.log('Calling serverDataDebounced after damage');
     this.serverDataDebounced();
   }
 
@@ -779,12 +813,17 @@ class CoreService {
     const arenaId = this.curentArenaId;
     const playerId = this.curentPlayerId;
     
+    console.log(`Handling kill for player ${playerId} in arena ${arenaId}`);
+    
     this.initializeBattleStats(arenaId, playerId);
     
     this.BattleStats[arenaId].players[playerId].kills += 1;
     this.BattleStats[arenaId].players[playerId].points += GAME_POINTS.POINTS_PER_FRAG;
     
+    console.log(`Updated player stats after kill:`, this.BattleStats[arenaId].players[playerId]);
+    
     this.clearCalculationCache();
+    console.log('Calling serverDataDebounced after kill');
     this.serverDataDebounced();
   }
 
