@@ -141,10 +141,21 @@ class CoreService {
           
           // Перевірка для арени
           const existingBattle = this.BattleStats?.[arenaId];
+          
+          // Для duration: якщо локально є більше значення (бій завершився), використовуємо його
+          const localDuration = existingBattle?.duration ?? 0;
+          const serverDuration = battleData.duration ?? 0;
+          const finalDuration = Math.max(localDuration, serverDuration);
+          
+          // Для win: якщо локально є завершений бій (win !== -1), використовуємо локальне значення
+          const localWin = existingBattle?.win ?? -1;
+          const serverWin = typeof battleData.win === 'number' ? battleData.win : -1;
+          const finalWin = localWin !== -1 ? localWin : serverWin;
+          
           normalized[arenaId] = {
             startTime: battleData.startTime || (existingBattle?.startTime) || Date.now(),
-            duration: Math.max(battleData.duration ?? 0, existingBattle?.duration ?? 0),
-            win: typeof battleData.win === 'number' ? battleData.win : (existingBattle?.win ?? -1),
+            duration: finalDuration,
+            win: finalWin,
             mapName: battleData.mapName || (existingBattle?.mapName) || 'Unknown Map',
             players
           };
