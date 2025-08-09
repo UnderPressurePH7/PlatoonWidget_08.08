@@ -172,8 +172,8 @@ class UIService {
         newRefreshBtn.textContent = 'Оновлення...';
 
         await this.core.initializeState();
-        await this.core.refreshData();
-        //await this.core.refreshLocalData();
+        //await this.core.refreshData();
+        await this.core.refreshLocalData();
         this.updatePlayersUI();
         this.core.saveState();
 
