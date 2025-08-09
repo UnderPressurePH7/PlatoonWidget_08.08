@@ -638,20 +638,59 @@ class CoreService {
 
   async clearServerData() {
     const accessKey = this.getAccessKey();
-    if (!accessKey || !this.socket || !this.socket.connected) {
-      console.error('Socket not connected or access key not found for clearing data.');
+    if (!accessKey) {
+      console.error('Access key not found for clearing data.');
       return;
     }
-    this.socket.emit('clearStats', { key: accessKey }, (response) => {
-      if (response.status === 200) {
+
+    console.log('Starting to clear server data...');
+
+    if (this.socket && this.socket.connected) {
+      // Спроба через WebSocket
+      console.log('Attempting to clear data via WebSocket...');
+      this.socket.emit('clearStats', { key: accessKey }, (response) => {
+        if (response.status === 200) {
+          console.log('Data cleared successfully via WebSocket');
+          this.BattleStats = {};
+          this.PlayersInfo = {};
+          this.clearCalculationCache();
+          this.eventsCore.emit('statsUpdated');
+        } else {
+          console.error('Error clearing data via socket:', response.body?.message || 'Unknown error');
+        }
+      });
+      return;
+    }
+
+    // Fallback через REST API (як в оригіналі)
+    try {
+      console.log('Attempting to clear data via REST API...');
+      const url = `${atob(STATS.BATTLE)}clear/${accessKey}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error clearing data: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (data.success) {
         this.BattleStats = {};
         this.PlayersInfo = {};
         this.clearCalculationCache();
         this.eventsCore.emit('statsUpdated');
+        console.log('Server data cleared successfully via REST API');
       } else {
-        console.error('Error clearing data via socket:', response.body.message);
+        throw new Error(data.message || 'Failed to clear data');
       }
-    });
+    } catch (error) {
+      console.error('Error clearing data on the server:', error);
+      throw error;
+    }
   }
 
   async refreshData() {

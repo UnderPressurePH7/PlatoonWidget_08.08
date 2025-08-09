@@ -203,6 +203,7 @@ class UIService {
       event.stopImmediatePropagation();
 
       if (this.isProcessing.removeHistory) {
+        console.log('Remove history already in progress');
         return;
       }
 
@@ -217,19 +218,27 @@ class UIService {
         newRestoreBtn.disabled = true;
         newRestoreBtn.textContent = 'Видалення...';
 
+        // Спочатку завантажуємо свіжі дані з сервера
         try {
           await this.core.loadFromServer();
         } catch (loadError) {
           console.warn('Попередження при завантаженні даних:', loadError);
         }
 
+        // Очищуємо дані на сервері
         await this.core.clearServerData();
+        
+        // Очищуємо локальний стан
         this.core.clearState();
-        this.core.clearCalculationCache();
+        
+        // Оновлюємо UI
         this.updatePlayersUI();
         
+        // Очищуємо весь localStorage (як в оригіналі)
         localStorage.clear();
         this.resetTeamStatsUI();
+
+        console.log('History cleared successfully');
 
       } catch (error) {
         console.error('Error when deleting statistics:', error);
