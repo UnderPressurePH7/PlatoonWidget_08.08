@@ -1037,7 +1037,12 @@ class CoreService {
     console.log('Processing battle result for arena:', arenaId);
     console.log('Current player ID:', this.curentPlayerId);
     
-    this.initializeBattleStats(arenaId, this.curentPlayerId);
+    // НЕ викликаємо initializeBattleStats, оскільки арена вже має існувати
+    // Встановлюємо дані напряму, як в старому коді
+    if (!this.BattleStats[arenaId]) {
+      console.error(`Arena ${arenaId} not found in BattleStats during battle result processing`);
+      return;
+    }
     
     this.BattleStats[arenaId].duration = result.common.duration;
 
@@ -1063,16 +1068,18 @@ class CoreService {
       for (const vehicle of vehicles) {
         if (vehicle.accountDBID === this.curentPlayerId) {
           const playerStats = this.BattleStats[arenaId].players[this.curentPlayerId];
-          playerStats.damage = vehicle.damageDealt;
-          playerStats.kills = vehicle.kills;
-          playerStats.points = vehicle.damageDealt + (vehicle.kills * GAME_POINTS.POINTS_PER_FRAG);
-          
-          // Оновлюємо назву танка, якщо доступна
-          if (vehicle.typeCompDescr || vehicle.vehicleName) {
-            playerStats.vehicle = vehicle.vehicleName || vehicle.typeCompDescr || 'Unknown Vehicle';
+          if (playerStats) {
+            playerStats.damage = vehicle.damageDealt;
+            playerStats.kills = vehicle.kills;
+            playerStats.points = vehicle.damageDealt + (vehicle.kills * GAME_POINTS.POINTS_PER_FRAG);
+            
+            // Оновлюємо назву танка, якщо доступна
+            if (vehicle.typeCompDescr || vehicle.vehicleName) {
+              playerStats.vehicle = vehicle.vehicleName || vehicle.typeCompDescr || 'Unknown Vehicle';
+            }
+            
+            console.log('Updated player stats from battle result:', playerStats);
           }
-          
-          console.log('Updated player stats from battle result:', playerStats);
           break;
         }
       }
