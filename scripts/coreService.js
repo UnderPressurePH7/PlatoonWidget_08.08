@@ -341,8 +341,11 @@ class CoreService {
   }
 
   isExistsPlayerRecord() {
-    const playersIds = this.getPlayersIds();
-    return playersIds.includes(this.curentPlayerId);
+    // Перевіряємо напряму в PlayersInfo, щоб уникнути проблем з типами даних
+    return this.curentPlayerId !== null && 
+           this.curentPlayerId !== undefined && 
+           this.PlayersInfo && 
+           this.PlayersInfo.hasOwnProperty(String(this.curentPlayerId));
   }
 
   findBestAndWorstBattle() {
@@ -1024,15 +1027,6 @@ class CoreService {
     console.log('Current player ID:', this.curentPlayerId);
     
     this.initializeBattleStats(arenaId, this.curentPlayerId);
-    
-    // Додаємо тільки поточного гравця до PlayersInfo, якщо його немає
-    if (result.players && result.players[this.curentPlayerId]) {
-      const currentPlayerData = result.players[this.curentPlayerId];
-      if (currentPlayerData.name && !this.PlayersInfo[this.curentPlayerId]) {
-        this.PlayersInfo[this.curentPlayerId] = currentPlayerData.name;
-        console.log(`Added current player to PlayerInfo: ${this.curentPlayerId} -> ${currentPlayerData.name}`);
-      }
-    }
     
     this.BattleStats[arenaId].duration = result.common.duration;
 
