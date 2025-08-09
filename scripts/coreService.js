@@ -1023,16 +1023,16 @@ class CoreService {
     console.log('Processing battle result for arena:', arenaId);
     console.log('Current player ID:', this.curentPlayerId);
     
-    if (result.players) {
-      Object.entries(result.players).forEach(([playerId, playerData]) => {
-        if (playerData.name && !this.PlayersInfo[playerId]) {
-          this.PlayersInfo[playerId] = playerData.name;
-          console.log(`Added player to PlayerInfo: ${playerId} -> ${playerData.name}`);
-        }
-      });
-    }
-    
     this.initializeBattleStats(arenaId, this.curentPlayerId);
+    
+    // Додаємо тільки поточного гравця до PlayersInfo, якщо його немає
+    if (result.players && result.players[this.curentPlayerId]) {
+      const currentPlayerData = result.players[this.curentPlayerId];
+      if (currentPlayerData.name && !this.PlayersInfo[this.curentPlayerId]) {
+        this.PlayersInfo[this.curentPlayerId] = currentPlayerData.name;
+        console.log(`Added current player to PlayerInfo: ${this.curentPlayerId} -> ${currentPlayerData.name}`);
+      }
+    }
     
     this.BattleStats[arenaId].duration = result.common.duration;
 
