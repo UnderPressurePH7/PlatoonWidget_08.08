@@ -30,6 +30,7 @@ class CoreService {
     }
     
     try {
+      console.log('Initializing WebSocket connection with key:', accessKey);
       this.socket = io(atob(STATS.WEBSOCKET_URL), {
         query: { key: accessKey },
         transports: ['websocket', 'polling'],
@@ -39,8 +40,10 @@ class CoreService {
       });
 
       this.socket.on('connect', () => {
+        console.log('WebSocket connected successfully');
         this.socket.emit('getStats', { key: accessKey }, (response) => {
           if (response && response.status === 200) {
+            console.log('Initial stats loaded via WebSocket:', response.body);
             this.handleServerData(response.body);
             this.clearCalculationCache();
             this.eventsCore.emit('statsUpdated');
@@ -504,6 +507,11 @@ class CoreService {
       console.log('No player data to save, but continuing to preserve structure');
     }
 
+    console.log('SaveToServer called:');
+    console.log('- Has player data:', hasPlayerData);
+    console.log('- BattleStats keys:', Object.keys(this.BattleStats || {}));
+    console.log('- Current battle players:', this.curentArenaId ? Object.keys(this.BattleStats[this.curentArenaId]?.players || {}) : 'No current arena');
+
     const dataToSend = {
       key: accessKey,
       playerId: this.curentPlayerId,
@@ -534,13 +542,19 @@ class CoreService {
       }
     };
     
+    console.log('Data to send to server:', JSON.stringify(dataToSend.body, null, 2));
+    console.log('Player ID:', this.curentPlayerId);
+    console.log('Access Key:', accessKey);
+    
     if (this.socket && this.socket.connected) {
       let saveCallbackReceived = false;
       let fallbackUsed = false;
       
+      console.log('Sending data via WebSocket...');
       this.socket.emit('updateStats', dataToSend, (response) => {
         if (!fallbackUsed) {
           saveCallbackReceived = true;
+          console.log('WebSocket response:', response);
           if (response && response.status === 202) {
             console.log('Data saved successfully via WebSocket');
           } else {
@@ -621,7 +635,7 @@ class CoreService {
 
   async loadViaREST(accessKey) {
     try {
-      const url = `${atob(STATS.BATTLE)}${accessKey}`;
+      const url = `${atob(STATS.BATTLE)}get/${accessKey}`;
       const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
       if (res.ok) {
         const body = await res.json();
@@ -656,7 +670,7 @@ class CoreService {
     }
 
     try {
-      const url = `${atob(STATS.BATTLE)}pid/${accessKey}`;
+      const url = `${atob(STATS.BATTLE)}get/${accessKey}`;
       const res = await fetch(url, { headers: { 'Content-Type': 'application/json', 'X-Player-ID': this.curentPlayerId || '' } });
       if (res.ok) {
         const body = await res.json();
