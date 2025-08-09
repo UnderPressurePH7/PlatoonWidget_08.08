@@ -99,22 +99,48 @@ class CoreService {
             const kills = (typeof p.kills === 'number') ? p.kills : (typeof p.frags === 'number' ? p.frags : 0);
             const damage = typeof p.damage === 'number' ? p.damage : 0;
             const points = typeof p.points === 'number' ? p.points : (damage + kills * GAME_POINTS.POINTS_PER_FRAG);
-            players[pid] = {
-              name: p.name || this.PlayersInfo?.[pid] || 'Unknown Player',
-              damage,
-              kills,
-              points,
-              vehicle: p.vehicle || 'Unknown Vehicle'
-            };
+            
+            // Перевірка чи існують локальні дані для цього гравця в цій арені
+            const existingPlayer = this.BattleStats?.[arenaId]?.players?.[pid];
+            if (existingPlayer) {
+              // Якщо локальні дані більші, зберігаємо їх
+              players[pid] = {
+                name: p.name || existingPlayer.name || this.PlayersInfo?.[pid] || 'Unknown Player',
+                damage: Math.max(damage, existingPlayer.damage || 0),
+                kills: Math.max(kills, existingPlayer.kills || 0),
+                points: Math.max(points, existingPlayer.points || 0),
+                vehicle: p.vehicle || existingPlayer.vehicle || 'Unknown Vehicle'
+              };
+            } else {
+              // Нові дані - ініціалізуємо заново
+              players[pid] = {
+                name: p.name || this.PlayersInfo?.[pid] || 'Unknown Player',
+                damage,
+                kills,
+                points,
+                vehicle: p.vehicle || 'Unknown Vehicle'
+              };
+            }
           });
+          
+          // Перевірка для арени
+          const existingBattle = this.BattleStats?.[arenaId];
           normalized[arenaId] = {
-            startTime: battle.startTime || Date.now(),
-            duration: battle.duration ?? 0,
-            win: typeof battle.win === 'number' ? battle.win : -1,
-            mapName: battle.mapName || 'Unknown Map',
+            startTime: battle.startTime || (existingBattle?.startTime) || Date.now(),
+            duration: Math.max(battle.duration ?? 0, existingBattle?.duration ?? 0),
+            win: typeof battle.win === 'number' ? battle.win : (existingBattle?.win ?? -1),
+            mapName: battle.mapName || (existingBattle?.mapName) || 'Unknown Map',
             players
           };
         });
+        
+        // Зберігаємо арени, які є локально, але відсутні в серверних даних
+        Object.entries(this.BattleStats || {}).forEach(([arenaId, localBattle]) => {
+          if (!normalized[arenaId]) {
+            normalized[arenaId] = localBattle;
+          }
+        });
+        
         this.BattleStats = normalized;
       }
       if (data.PlayerInfo) {
