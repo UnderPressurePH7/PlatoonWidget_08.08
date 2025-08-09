@@ -96,9 +96,9 @@ class CoreService {
 
   handleServerData(data) {
     if (data.success) {
-      // Підтримка обох форматів: старого (BattleStats) та нового (battleStats)
-      const battleStats = data.battleStats || data.BattleStats;
-      const playersInfo = data.playersInfo || data.PlayerInfo;
+      // Підтримка серверного формату (BattleStats та PlayerInfo)
+      const battleStats = data.BattleStats;
+      const playersInfo = data.PlayerInfo;
       
       if (battleStats) {
         const normalized = {};
@@ -519,7 +519,7 @@ class CoreService {
       key: accessKey,
       playerId: this.curentPlayerId,
       body: {
-        battleStats: Object.fromEntries(Object.entries(this.BattleStats || {}).map(([arenaId, battle]) => {
+        BattleStats: Object.fromEntries(Object.entries(this.BattleStats || {}).map(([arenaId, battle]) => {
           const players = {};
           Object.entries(battle.players || {}).forEach(([pid, p]) => {
             players[pid] = {
@@ -538,7 +538,7 @@ class CoreService {
             players
           }];
         })),
-        playersInfo: Object.fromEntries(Object.entries(this.PlayersInfo || {}).map(([pid, nickname]) => [
+        PlayerInfo: Object.fromEntries(Object.entries(this.PlayersInfo || {}).map(([pid, nickname]) => [
           pid, 
           typeof nickname === 'string' ? nickname : (nickname._id || nickname.name || 'Unknown Player')
         ])),
