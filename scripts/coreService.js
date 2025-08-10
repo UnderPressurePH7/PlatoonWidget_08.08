@@ -95,6 +95,7 @@ class CoreService {
   }
 
   handleServerData(data) {
+    console.log('handleServerData called with data:', data);
     if (data.success) {
       // Підтримка серверного формату (BattleStats та PlayerInfo)
       const battleStats = data.BattleStats;
@@ -150,7 +151,11 @@ class CoreService {
           // Для win: якщо локально є завершений бій (win !== -1), використовуємо локальне значення
           const localWin = existingBattle?.win ?? -1;
           const serverWin = typeof battleData.win === 'number' ? battleData.win : -1;
+          // Якщо локально бій завершений (win !== -1), не перезаписуємо з сервера
           const finalWin = localWin !== -1 ? localWin : serverWin;
+          
+          console.log(`Arena ${arenaId}: local duration=${localDuration}, server duration=${serverDuration}, final=${finalDuration}`);
+          console.log(`Arena ${arenaId}: local win=${localWin}, server win=${serverWin}, final=${finalWin}`);
           
           normalized[arenaId] = {
             startTime: battleData.startTime || (existingBattle?.startTime) || Date.now(),
@@ -169,6 +174,7 @@ class CoreService {
         });
         
         this.BattleStats = normalized;
+        console.log('BattleStats updated from server:', this.BattleStats);
       }
       
       if (playersInfo) {
@@ -848,6 +854,7 @@ class CoreService {
   async serverData() {
     try {
       console.log('Auto-saving data to server (debounced)...');
+      console.log('Current BattleStats before saving:', JSON.stringify(this.BattleStats, null, 2));
       const oldStats = JSON.stringify(this.BattleStats);
       await this.saveToServer();
       this.eventsCore.emit('statsUpdated');
@@ -1002,6 +1009,7 @@ class CoreService {
   }
 
   async handleBattleResult(result) {
+    console.log('handleBattleResult called with result:', result);
     if (!result || !result.vehicles || !result.players) {
       console.error("Invalid battle result data");
       return;
@@ -1058,11 +1066,13 @@ class CoreService {
     console.log('Battle result processed successfully:', this.BattleStats[arenaId]);
     console.log('Duration:', this.BattleStats[arenaId].duration);
     console.log('Winner:', this.BattleStats[arenaId].win);
+    console.log('Before clearing cache and saving to server');
 
     this.clearBestWorstCache(); 
     await Utils.getRandomDelay();
     
     if (this.isExistsPlayerRecord()) {
+      console.log('About to call serverDataDebounced');
       this.serverDataDebounced();
     }
   }
