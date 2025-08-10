@@ -53,7 +53,6 @@ class CoreService {
 
       this.socket.on('statsUpdated', (data) => {
         if (data && data.key === accessKey) {
-          // Завантажуємо оновлені дані з сервера
           this.socket.emit('getStats', { key: accessKey }, (response) => {
             if (response && response.status === 200) {
               this.handleServerData(response.body);
@@ -87,30 +86,25 @@ class CoreService {
 
   handleServerData(data) {
     if (data.success) {
-      // Підтримка серверного формату (BattleStats та PlayerInfo)
       const battleStats = data.BattleStats;
       const playersInfo = data.PlayerInfo;
       
       if (battleStats) {
         const normalized = {};
         Object.entries(battleStats).forEach(([arenaId, battle]) => {
-          // Обробляємо дані бою - сервер може повертати або пряму структуру, або обгорнуту в _id
           const battleData = (battle && typeof battle === 'object' && battle._id) ? battle._id : battle;
           
           const players = {};
           const rawPlayers = battleData?.players || {};
           Object.entries(rawPlayers).forEach(([pid, playerData]) => {
-            // Обробляємо дані гравця - сервер може повертати або пряму структуру, або обгорнуту в _id
             const p = (playerData && typeof playerData === 'object' && playerData._id) ? playerData._id : playerData;
             
             const kills = typeof p.kills === 'number' ? p.kills : 0;
             const damage = typeof p.damage === 'number' ? p.damage : 0;
             const points = typeof p.points === 'number' ? p.points : (damage + kills * GAME_POINTS.POINTS_PER_FRAG);
-            
-            // Перевірка чи існують локальні дані для цього гравця в цій арені
+
             const existingPlayer = this.BattleStats?.[arenaId]?.players?.[pid];
             if (existingPlayer) {
-              // Серверні дані перезаписують локальні тільки якщо вони більші
               players[pid] = {
                 name: p.name || existingPlayer.name || this.PlayersInfo?.[pid] || 'Unknown Player',
                 damage: Math.max(damage || 0, existingPlayer.damage || 0),
@@ -119,7 +113,7 @@ class CoreService {
                 vehicle: p.vehicle || existingPlayer.vehicle || 'Unknown Vehicle'
               };
             } else {
-              // Нові дані - ініціалізуємо заново
+
               players[pid] = {
                 name: p.name || this.PlayersInfo?.[pid] || 'Unknown Player',
                 damage,
@@ -129,19 +123,15 @@ class CoreService {
               };
             }
           });
-          
-          // Перевірка для арени
+
           const existingBattle = this.BattleStats?.[arenaId];
           
-          // Для duration: якщо локально є більше значення (бій завершився), використовуємо його
           const localDuration = existingBattle?.duration ?? 0;
           const serverDuration = battleData.duration ?? 0;
           const finalDuration = Math.max(localDuration, serverDuration);
           
-          // Для win: якщо локально є завершений бій (win !== -1), використовуємо локальне значення
           const localWin = existingBattle?.win ?? -1;
           const serverWin = typeof battleData.win === 'number' ? battleData.win : -1;
-          // Якщо локально бій завершений (win !== -1), не перезаписуємо з сервера
           const finalWin = localWin !== -1 ? localWin : serverWin;
           
           normalized[arenaId] = {
@@ -153,7 +143,6 @@ class CoreService {
           };
         });
         
-        // Зберігаємо арени, які є локально, але відсутні в серверних даних
         Object.entries(this.BattleStats || {}).forEach(([arenaId, localBattle]) => {
           if (!normalized[arenaId]) {
             normalized[arenaId] = localBattle;
@@ -166,7 +155,6 @@ class CoreService {
       if (playersInfo) {
         const normalizedPlayerInfo = {};
         Object.entries(playersInfo).forEach(([playerId, playerInfo]) => {
-          // Сервер повертає playersInfo як { "_id": "nickname" } або просто "nickname"
           if (typeof playerInfo === 'object' && playerInfo._id) {
             normalizedPlayerInfo[playerId] = playerInfo._id;
           } else if (typeof playerInfo === 'string') {
@@ -177,8 +165,7 @@ class CoreService {
         });
         this.PlayersInfo = normalizedPlayerInfo;
       }
-      
-      // Очищаємо кеш найкращого/найгіршого бою після завантаження даних з сервера
+
       this.clearBestWorstCache();
     }
   }
@@ -203,6 +190,7 @@ class CoreService {
       this.curentVehicle = savedState.curentVehicle || null;
       this.isInPlatoon = savedState.isInPlatoon || false;
       this.isInBattle = savedState.isInBattle || false;
+      this.needToAddPlayers = savedState.needToAddPlayers || true;
       this.lastUpdateTime = savedState.lastUpdateTime || null;
     } else {
       this.resetState();
@@ -221,6 +209,7 @@ class CoreService {
     this.curentVehicle = null;
     this.isInPlatoon = false;
     this.isInBattle = false;
+    this.needToAddPlayers = true;
     this.lastUpdateTime = null;
   }
 
@@ -825,11 +814,12 @@ class CoreService {
 
   async handleHangarStatus(isInHangar) {
     if (!isInHangar) return;
-    
-    await Utils.sleep(CONFIG.HANGAR_DELAY);
-    const playersID = this.getPlayersIds();
-    this.curentPlayerId = this.sdk.data.player.id.value;
-    this.curentArenaId = null;
+
+    if (this.needToAddPlayers) {
+      await Utils.sleep(CONFIG.HANGAR_DELAY);
+      const playersID = this.getPlayersIds();
+      this.curentPlayerId = this.sdk.data.player.id.value;
+      this.curentArenaId = null;
 
     if (this.curentPlayerId === null) return;
     if ((this.isInPlatoon && playersID.length > 3) || (!this.isInPlatoon && playersID.length >= 1)) {
@@ -841,6 +831,7 @@ class CoreService {
     await Utils.getRandomDelay();
     this.serverDataDebounced();
   }
+}
 
   handleHangarVehicle(hangareVehicleData) {
     if (!hangareVehicleData) return;
@@ -965,6 +956,7 @@ class CoreService {
     if (!arenaId) return;
 
     this.curentPlayerId = result.personal.avatar.accountDBID;
+    this.needToAddPlayers = false;
     
     if (!this.BattleStats[arenaId]) {
       console.error(`Arena ${arenaId} not found in BattleStats during battle result processing`);
