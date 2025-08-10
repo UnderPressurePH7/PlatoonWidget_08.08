@@ -1084,14 +1084,17 @@ class CoreService {
         }
       }
     }
-    this.serverDataDebounced();
+    console.log('Battle result processed successfully:', this.BattleStats[arenaId]);
+    console.log('Duration:', this.BattleStats[arenaId].duration);
+    console.log('Winner:', this.BattleStats[arenaId].win);
+
     this.clearBestWorstCache(); // Очищаємо кеш найкращого/найгіршого бою, оскільки з'явився новий завершений бій
     await Utils.getRandomDelay();
     
     // // Перевірка чи існує запис гравця перед відправкою на сервер
-    // if (this.isExistsPlayerRecord()) {
-    //   this.serverDataDebounced();
-    // }
+    if (this.isExistsPlayerRecord()) {
+      this.serverDataDebounced();
+    }
   }
 }
 
