@@ -132,7 +132,7 @@ class CoreService {
           
           const localWin = existingBattle?.win ?? -1;
           const serverWin = typeof battleData.win === 'number' ? battleData.win : -1;
-          const finalWin = localWin !== -1 ? localWin : serverWin;
+          const finalWin = serverWin !== -1 ? serverWin : localWin;
           
           normalized[arenaId] = {
             startTime: battleData.startTime || (existingBattle?.startTime) || Date.now(),
@@ -570,7 +570,6 @@ class CoreService {
         if (!fallbackUsed) {
           saveCallbackReceived = true;
           if (response && response.status === 202) {
-            // Data saved successfully
           } else {
             console.error('Error updating stats via WebSocket:', response?.body?.message || 'Unknown error');
           }
