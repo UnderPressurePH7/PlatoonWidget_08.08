@@ -571,34 +571,32 @@ class CoreService {
     const dataToSend = {
       key: accessKey,
       playerId: this.curentPlayerId,
-      body: {
-        BattleStats: Object.fromEntries(Object.entries(this.BattleStats || {}).map(([arenaId, battle]) => {
-          const players = {};
-          Object.entries(battle.players || {}).forEach(([pid, p]) => {
-            players[pid] = {
-              name: p.name || 'Unknown Player',
-              damage: p.damage || 0,
-              kills: p.kills || 0,
-              points: p.points || 0,
-              vehicle: p.vehicle || 'Unknown Vehicle'
-            };
-          });
-          return [arenaId, { 
-            startTime: battle.startTime || Date.now(),
-            duration: battle.duration || 0,
-            win: battle.win !== undefined ? battle.win : -1,
-            mapName: battle.mapName || 'Unknown Map',
-            players
-          }];
-        })),
-        PlayerInfo: Object.fromEntries(Object.entries(this.PlayersInfo || {}).map(([pid, nickname]) => [
-          pid, 
-          typeof nickname === 'string' ? nickname : (nickname._id || nickname.name || 'Unknown Player')
-        ])),
-      }
+      BattleStats: Object.fromEntries(Object.entries(this.BattleStats || {}).map(([arenaId, battle]) => {
+        const players = {};
+        Object.entries(battle.players || {}).forEach(([pid, p]) => {
+          players[pid] = {
+            name: p.name || 'Unknown Player',
+            damage: p.damage || 0,
+            kills: p.kills || 0,
+            points: p.points || 0,
+            vehicle: p.vehicle || 'Unknown Vehicle'
+          };
+        });
+        return [arenaId, { 
+          startTime: battle.startTime || Date.now(),
+          duration: battle.duration || 0,
+          win: battle.win !== undefined ? battle.win : -1,
+          mapName: battle.mapName || 'Unknown Map',
+          players
+        }];
+      })),
+      PlayerInfo: Object.fromEntries(Object.entries(this.PlayersInfo || {}).map(([pid, nickname]) => [
+        pid, 
+        { _id: typeof nickname === 'string' ? nickname : (nickname._id || nickname.name || 'Unknown Player') }
+      ]))
     };
     
-    console.log('Data to send to server:', JSON.stringify(dataToSend.body, null, 2));
+    console.log('Data to send to server:', JSON.stringify(dataToSend, null, 2));
     console.log('Player ID:', this.curentPlayerId);
     console.log('Access Key:', accessKey);
     
@@ -623,13 +621,13 @@ class CoreService {
         if (!saveCallbackReceived && !fallbackUsed) {
           fallbackUsed = true;
           console.log('WebSocket timeout, falling back to REST API');
-          await this.saveViaREST(dataToSend.body, accessKey);
+          await this.saveViaREST(dataToSend, accessKey);
         }
       }, 3000);
       
       return;
     }
-    await this.saveViaREST(dataToSend.body, accessKey);
+    await this.saveViaREST(dataToSend, accessKey);
   }
 
   async saveViaREST(data, accessKey) {
@@ -637,9 +635,7 @@ class CoreService {
       console.log('Using REST API fallback');
       console.log('Data being sent:', data);
       
-      const url = `${atob(STATS.BATTLE)}update/${accessKey}`;
-      
-      const response = await fetch(url, {
+      const response = await fetch(`${atob(STATS.BATTLE)}${accessKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -687,8 +683,13 @@ class CoreService {
 
   async loadViaREST(accessKey) {
     try {
-      const url = `${atob(STATS.BATTLE)}get/${accessKey}`;
-      const res = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
+      const res = await fetch(`${atob(STATS.BATTLE)}${accessKey}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Player-ID': this.curentPlayerId
+        }
+      });
       if (res.ok) {
         const body = await res.json();
         this.handleServerData({ success: true, ...body });
@@ -722,8 +723,13 @@ class CoreService {
     }
 
     try {
-      const url = `${atob(STATS.BATTLE)}get/${accessKey}`;
-      const res = await fetch(url, { headers: { 'Content-Type': 'application/json', 'X-Player-ID': this.curentPlayerId || '' } });
+      const res = await fetch(`${atob(STATS.BATTLE)}pid/${accessKey}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Player-ID': this.curentPlayerId || ''
+        }
+      });
       if (res.ok) {
         const body = await res.json();
         this.handleServerData({ success: true, ...body });
@@ -760,11 +766,11 @@ class CoreService {
 
     try {
       console.log('Attempting to clear data via REST API...');
-      const url = `${atob(STATS.BATTLE)}clear/${accessKey}`;
-      const response = await fetch(url, {
+      const response = await fetch(`${atob(STATS.BATTLE)}clear/${accessKey}`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Player-ID': this.curentPlayerId || ''
         }
       });
 

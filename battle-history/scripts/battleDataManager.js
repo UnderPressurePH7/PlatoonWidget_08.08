@@ -111,7 +111,7 @@ class BattleDataManager {
     });
 
     if (!response.ok) {
-      throw new Error(`Server error: ${response.statusText}`);
+      throw new Error(`Server error: ${response.status} ${response.statusText}`);
     }
 
     return response.json();
@@ -124,37 +124,21 @@ class BattleDataManager {
         throw new Error('Access key not found');
       }
 
-      const formattedBattleStats = Object.fromEntries(Object.entries(this.BattleStats || {}).map(([arenaId, battle]) => {
-        const players = {};
-        Object.entries(battle.players || {}).forEach(([pid, p]) => {
-          players[pid] = {
-            _id: {
-              name: p.name || 'Unknown Player',
-              damage: p.damage || 0,
-              kills: p.kills || 0,
-              points: p.points || 0,
-              vehicle: p.vehicle || 'Unknown Vehicle'
-            }
-          };
-        });
-        return [arenaId, { 
-          _id: {
-            startTime: battle.startTime || Date.now(),
-            duration: battle.duration || 0,
-            win: battle.win || -1,
-            mapName: battle.mapName || 'Unknown Map',
-            players
-          }
-        }];
-      }));
+      const data = {
+        BattleStats: this.BattleStats,
+        PlayerInfo: Object.fromEntries(Object.entries(this.PlayersInfo || {}).map(([pid, nickname]) => [
+          pid, 
+          { _id: typeof nickname === 'string' ? nickname : (nickname._id || nickname.name || 'Unknown Player') }
+        ]))
+      };
 
-      const data = await this.makeServerRequest(`${atob(STATS.BATTLE)}import/${accessKey}`, {
+      const response = await this.makeServerRequest(`${atob(STATS.BATTLE)}${accessKey}`, {
         method: 'POST',
-        body: JSON.stringify({ BattleStats: formattedBattleStats })
+        body: JSON.stringify(data)
       });
 
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to save data');
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to save data');
       }
 
       return true;
@@ -171,7 +155,9 @@ class BattleDataManager {
         throw new Error('Access key not found');
       }
 
-      const data = await this.makeServerRequest(`${atob(STATS.BATTLE)}${accessKey}`);
+      const data = await this.makeServerRequest(`${atob(STATS.BATTLE)}${accessKey}`, {
+        method: 'GET'
+      });
 
       if (data.success) {
         if (data.BattleStats) {
