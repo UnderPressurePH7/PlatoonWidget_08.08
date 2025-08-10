@@ -96,7 +96,6 @@ class UIService {
     const totalBattlePoints = this.core.calculateBattleData();
     
     const battleStats = this.core.findBestAndWorstBattle();
-    console.log('Battle Stats from core:', battleStats);
     
     // Оновлюємо відображення найкращого та найгіршого бою
     this.updateElement('best-battle', battleStats.bestBattle?.points?.toLocaleString() || '0');
