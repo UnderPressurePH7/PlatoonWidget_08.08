@@ -991,9 +991,9 @@ class CoreService {
             playerStats.kills = vehicle.kills;
             playerStats.points = vehicle.damageDealt + (vehicle.kills * GAME_POINTS.POINTS_PER_FRAG);
             
-            if (vehicle.typeCompDescr || vehicle.vehicleName) {
-              playerStats.vehicle = vehicle.vehicleName || vehicle.typeCompDescr || 'Unknown Vehicle';
-            }
+            // if (vehicle.typeCompDescr || vehicle.vehicleName) {
+            //   playerStats.vehicle = vehicle.vehicleName || vehicle.typeCompDescr || 'Unknown Vehicle';
+            // }
           }
           break;
         }
