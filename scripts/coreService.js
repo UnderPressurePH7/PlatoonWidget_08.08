@@ -560,7 +560,6 @@ class CoreService {
       return;
     }
 
-    // Перевіряємо чи є дані для відправки
     const hasPlayerData = Object.values(this.BattleStats || {}).some(battle => 
       battle.players && Object.keys(battle.players).length > 0
     );
@@ -568,11 +567,6 @@ class CoreService {
     if (!hasPlayerData) {
       console.log('No player data to save, but continuing to preserve structure');
     }
-
-    console.log('SaveToServer called:');
-    console.log('- Has player data:', hasPlayerData);
-    console.log('- BattleStats keys:', Object.keys(this.BattleStats || {}));
-    console.log('- Current battle players:', this.curentArenaId ? Object.keys(this.BattleStats[this.curentArenaId]?.players || {}) : 'No current arena');
 
     const dataToSend = {
       key: accessKey,
@@ -643,7 +637,6 @@ class CoreService {
       console.log('Using REST API fallback');
       console.log('Data being sent:', data);
       
-      // Виправлений URL згідно з серверним маршрутом
       const url = `${atob(STATS.BATTLE)}update/${accessKey}`;
       
       const response = await fetch(url, {
@@ -684,14 +677,11 @@ class CoreService {
           this.saveState();
         } else {
           console.error('Error getting initial stats via socket:', response?.body?.message || 'Unknown error');
-          // Fallback to REST API if WebSocket fails
           this.loadViaREST(accessKey);
         }
       });
       return;
     }
-
-    // Fallback to REST API
     await this.loadViaREST(accessKey);
   }
 
@@ -752,9 +742,6 @@ class CoreService {
       console.error('Access key not found for clearing data.');
       return;
     }
-
-    console.log('Starting to clear server data...');
-
     if (this.socket && this.socket.connected) {
       console.log('Clearing data via WebSocket...');
       this.socket.emit('clearStats', { key: accessKey }, (response) => {
@@ -773,10 +760,9 @@ class CoreService {
 
     try {
       console.log('Attempting to clear data via REST API...');
-      // Виправлений URL згідно з серверним маршрутом
       const url = `${atob(STATS.BATTLE)}clear/${accessKey}`;
       const response = await fetch(url, {
-        method: 'GET', // Сервер очікує GET запит
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json'
         }
@@ -888,7 +874,7 @@ class CoreService {
 
     this.PlayersInfo[this.curentPlayerId] = this.sdk.data.player.name.value;
 
-    //await Utils.getRandomDelay();
+    await Utils.getRandomDelay();
     this.serverDataDebounced();
   }
 
@@ -915,7 +901,9 @@ class CoreService {
       this.PlayersInfo[this.curentPlayerId] = this.sdk.data.player.name.value;
     }
       this.clearCurrentBattleCache();
-      this.serverDataDebounced();
+      if (this.isExistsPlayerRecord()) {
+        this.serverDataDebounced();
+      }
   }
    
   async handleisInBattle(isInBattle) {
@@ -970,10 +958,6 @@ class CoreService {
     const arenaId = this.curentArenaId;
     const playerId = this.curentPlayerId;
     
-    console.log(`Handling damage: ${damageData.damage} for player ${playerId} in arena ${arenaId}`);
-    console.log('Damage data:', damageData);
-    
-    // Перевірка чи існує запис гравця
     if (this.isExistsPlayerRecord()) {
       this.initializeBattleStats(arenaId, playerId);
       
@@ -983,11 +967,7 @@ class CoreService {
       this.BattleStats[arenaId].players[playerId].damage = newDamage;
       this.BattleStats[arenaId].players[playerId].points += damageData.damage * GAME_POINTS.POINTS_PER_DAMAGE;
       
-      console.log(`Updated player stats:`, this.BattleStats[arenaId].players[playerId]);
-      console.log(`Total damage now: ${newDamage} (was: ${currentDamage})`);
-
       this.clearCalculationCache();
-      console.log('Calling serverDataDebounced after damage');
       this.serverDataDebounced();
     } else {
       console.log('Player record does not exist, skipping damage handling');
@@ -999,11 +979,7 @@ class CoreService {
 
     const arenaId = this.curentArenaId;
     const playerId = this.curentPlayerId;
-    
-    console.log(`Handling kill for player ${playerId} in arena ${arenaId}`);
-    console.log('Kill data:', killData);
-    
-    // Перевірка чи існує запис гравця
+        
     if (this.isExistsPlayerRecord()) {
       this.initializeBattleStats(arenaId, playerId);
       
@@ -1012,11 +988,7 @@ class CoreService {
       this.BattleStats[arenaId].players[playerId].kills = currentKills + 1;
       this.BattleStats[arenaId].players[playerId].points += GAME_POINTS.POINTS_PER_FRAG;
       
-      console.log(`Updated player stats after kill:`, this.BattleStats[arenaId].players[playerId]);
-      console.log(`Total kills now: ${currentKills + 1} (was: ${currentKills})`);
-
       this.clearCalculationCache();
-      console.log('Calling serverDataDebounced after kill');
       this.serverDataDebounced();
     } else {
       console.log('Player record does not exist, skipping kill handling');
@@ -1034,11 +1006,6 @@ class CoreService {
 
     this.curentPlayerId = result.personal.avatar.accountDBID;
     
-    console.log('Processing battle result for arena:', arenaId);
-    console.log('Current player ID:', this.curentPlayerId);
-    
-    // НЕ викликаємо initializeBattleStats, оскільки арена вже має існувати
-    // Встановлюємо дані напряму, як в старому коді
     if (!this.BattleStats[arenaId]) {
       console.error(`Arena ${arenaId} not found in BattleStats during battle result processing`);
       return;
@@ -1073,11 +1040,9 @@ class CoreService {
             playerStats.kills = vehicle.kills;
             playerStats.points = vehicle.damageDealt + (vehicle.kills * GAME_POINTS.POINTS_PER_FRAG);
             
-            // Оновлюємо назву танка, якщо доступна
             if (vehicle.typeCompDescr || vehicle.vehicleName) {
               playerStats.vehicle = vehicle.vehicleName || vehicle.typeCompDescr || 'Unknown Vehicle';
             }
-            
             console.log('Updated player stats from battle result:', playerStats);
           }
           break;
@@ -1088,10 +1053,9 @@ class CoreService {
     console.log('Duration:', this.BattleStats[arenaId].duration);
     console.log('Winner:', this.BattleStats[arenaId].win);
 
-    this.clearBestWorstCache(); // Очищаємо кеш найкращого/найгіршого бою, оскільки з'явився новий завершений бій
+    this.clearBestWorstCache(); 
     await Utils.getRandomDelay();
     
-    // // Перевірка чи існує запис гравця перед відправкою на сервер
     if (this.isExistsPlayerRecord()) {
       this.serverDataDebounced();
     }
