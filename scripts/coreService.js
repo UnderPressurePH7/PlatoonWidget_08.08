@@ -30,7 +30,6 @@ class CoreService {
     }
     
     try {
-      console.log('Initializing WebSocket connection with key:', accessKey);
       this.socket = io(atob(STATS.WEBSOCKET_URL), {
         query: { key: accessKey },
         transports: ['websocket', 'polling'],
@@ -40,10 +39,8 @@ class CoreService {
       });
 
       this.socket.on('connect', () => {
-        console.log('WebSocket connected successfully');
         this.socket.emit('getStats', { key: accessKey }, (response) => {
           if (response && response.status === 200) {
-            console.log('Initial stats loaded via WebSocket:', response.body);
             this.handleServerData(response.body);
             this.clearCalculationCache();
             this.eventsCore.emit('statsUpdated');
@@ -55,12 +52,10 @@ class CoreService {
       });
 
       this.socket.on('statsUpdated', (data) => {
-        console.log('Received statsUpdated event:', data);
         if (data && data.key === accessKey) {
           // Завантажуємо оновлені дані з сервера
           this.socket.emit('getStats', { key: accessKey }, (response) => {
             if (response && response.status === 200) {
-              console.log('Stats updated from server:', response.body);
               this.handleServerData(response.body);
               this.clearCalculationCache();
               this.eventsCore.emit('statsUpdated');
@@ -68,10 +63,6 @@ class CoreService {
             }
           });
         }
-      });
-
-      this.socket.on('disconnect', (reason) => {
-        console.log('WebSocket disconnected:', reason);
       });
 
       this.socket.on('connect_error', (error) => {
@@ -95,7 +86,6 @@ class CoreService {
   }
 
   handleServerData(data) {
-    console.log('handleServerData called with data:', data);
     if (data.success) {
       // Підтримка серверного формату (BattleStats та PlayerInfo)
       const battleStats = data.BattleStats;
@@ -154,9 +144,6 @@ class CoreService {
           // Якщо локально бій завершений (win !== -1), не перезаписуємо з сервера
           const finalWin = localWin !== -1 ? localWin : serverWin;
           
-          console.log(`Arena ${arenaId}: local duration=${localDuration}, server duration=${serverDuration}, final=${finalDuration}`);
-          console.log(`Arena ${arenaId}: local win=${localWin}, server win=${serverWin}, final=${finalWin}`);
-          
           normalized[arenaId] = {
             startTime: battleData.startTime || (existingBattle?.startTime) || Date.now(),
             duration: finalDuration,
@@ -174,7 +161,6 @@ class CoreService {
         });
         
         this.BattleStats = normalized;
-        console.log('BattleStats updated from server:', this.BattleStats);
       }
       
       if (playersInfo) {
@@ -371,7 +357,6 @@ class CoreService {
     const cacheKey = `bestWorst_${battleIds}_${Object.keys(this.BattleStats).length}`;
     
     if (this.calculationCache.has(cacheKey)) {
-      console.log('findBestAndWorstBattle: Using cached result');
       return this.calculationCache.get(cacheKey);
     }
 
@@ -380,21 +365,15 @@ class CoreService {
       ...battle
     }));
 
-    console.log('findBestAndWorstBattle: Total battles:', allBattles.length);
-    console.log('BattleStats:', this.BattleStats);
-
     if (!allBattles || allBattles.length === 0) {
-      console.log('No battles found');
       const result = { bestBattle: null, worstBattle: null };
       this.calculationCache.set(cacheKey, result);
       return result;
     }
 
     const completedBattles = allBattles.filter(battle => battle.win !== -1);
-    console.log('Completed battles:', completedBattles.length);
 
     if (completedBattles.length === 0) {
-      console.log('No completed battles found');
       const result = { bestBattle: null, worstBattle: null };
       this.calculationCache.set(cacheKey, result);
       return result;
@@ -428,10 +407,6 @@ class CoreService {
         bestBattle: { battle: bestBattle, points: bestBattlePoints },
         worstBattle: { battle: worstBattle, points: worstBattlePoints }
       };
-      
-      console.log('findBestAndWorstBattle result:', result);
-      console.log('Best battle points:', bestBattlePoints);
-      console.log('Worst battle points:', worstBattlePoints);
       
       // Зберігаємо результат в кеші
       this.calculationCache.set(cacheKey, result);
@@ -570,10 +545,6 @@ class CoreService {
       battle.players && Object.keys(battle.players).length > 0
     );
 
-    if (!hasPlayerData) {
-      console.log('No player data to save, but continuing to preserve structure');
-    }
-
     const dataToSend = {
       key: accessKey,
       playerId: this.curentPlayerId,
@@ -602,21 +573,15 @@ class CoreService {
       ]))
     };
     
-    console.log('Data to send to server:', JSON.stringify(dataToSend, null, 2));
-    console.log('Player ID:', this.curentPlayerId);
-    console.log('Access Key:', accessKey);
-    
     if (this.socket && this.socket.connected) {
       let saveCallbackReceived = false;
       let fallbackUsed = false;
       
-      console.log('Sending data via WebSocket...');
       this.socket.emit('updateStats', dataToSend, (response) => {
         if (!fallbackUsed) {
           saveCallbackReceived = true;
-          console.log('WebSocket response:', response);
           if (response && response.status === 202) {
-            console.log('Data saved successfully via WebSocket');
+            // Data saved successfully
           } else {
             console.error('Error updating stats via WebSocket:', response?.body?.message || 'Unknown error');
           }
@@ -626,7 +591,6 @@ class CoreService {
       setTimeout(async () => {
         if (!saveCallbackReceived && !fallbackUsed) {
           fallbackUsed = true;
-          console.log('WebSocket timeout, falling back to REST API');
           await this.saveViaREST(dataToSend, accessKey);
         }
       }, 3000);
@@ -638,9 +602,6 @@ class CoreService {
 
   async saveViaREST(data, accessKey) {
     try {
-      console.log('Using REST API fallback');
-      console.log('Data being sent:', data);
-      
       const response = await fetch(`${atob(STATS.BATTLE)}${accessKey}`, {
         method: 'POST',
         headers: {
@@ -655,9 +616,7 @@ class CoreService {
       }
 
       const result = await response.json();
-      if (result.success) {
-        console.log('Data saved successfully via REST API');
-      } else {
+      if (!result.success) {
         throw new Error(result.message || 'Failed to save data');
       }
     } catch (error) {
@@ -755,14 +714,12 @@ class CoreService {
       return;
     }
     if (this.socket && this.socket.connected) {
-      console.log('Clearing data via WebSocket...');
       this.socket.emit('clearStats', { key: accessKey }, (response) => {
         if (response && response.status === 200) {
           this.BattleStats = {};
           this.PlayersInfo = {};
           this.clearCalculationCache();
           this.eventsCore.emit('statsUpdated');
-          console.log('Server data cleared successfully via WebSocket');
         } else {
           console.error('Error clearing data via socket:', response?.body?.message || 'Unknown error');
         }
@@ -771,7 +728,6 @@ class CoreService {
     }
 
     try {
-      console.log('Attempting to clear data via REST API...');
       const response = await fetch(`${atob(STATS.BATTLE)}clear/${accessKey}`, {
         method: 'GET',
         headers: {
@@ -790,7 +746,6 @@ class CoreService {
         this.PlayersInfo = {};
         this.clearCalculationCache();
         this.eventsCore.emit('statsUpdated');
-        console.log('Server data cleared successfully via REST API');
       } else {
         throw new Error(data.message || 'Failed to clear data');
       }
@@ -843,9 +798,7 @@ class CoreService {
 
   async serverDataSave() {
     try {
-      console.log('Saving data to server...');
       await this.saveToServer();
-      console.log('Data saved to server successfully');
     } catch (error) {
       console.error('Error in serverDataSave:', error);
     }
@@ -853,8 +806,6 @@ class CoreService {
 
   async serverData() {
     try {
-      console.log('Auto-saving data to server (debounced)...');
-      console.log('Current BattleStats before saving:', JSON.stringify(this.BattleStats, null, 2));
       const oldStats = JSON.stringify(this.BattleStats);
       await this.saveToServer();
       this.eventsCore.emit('statsUpdated');
@@ -982,8 +933,6 @@ class CoreService {
       
       this.clearCalculationCache();
       this.serverDataDebounced();
-    } else {
-      console.log('Player record does not exist, skipping damage handling');
     }
   }
 
@@ -1003,13 +952,10 @@ class CoreService {
       
       this.clearCalculationCache();
       this.serverDataDebounced();
-    } else {
-      console.log('Player record does not exist, skipping kill handling');
     }
   }
 
   async handleBattleResult(result) {
-    console.log('handleBattleResult called with result:', result);
     if (!result || !result.vehicles || !result.players) {
       console.error("Invalid battle result data");
       return;
@@ -1057,22 +1003,16 @@ class CoreService {
             if (vehicle.typeCompDescr || vehicle.vehicleName) {
               playerStats.vehicle = vehicle.vehicleName || vehicle.typeCompDescr || 'Unknown Vehicle';
             }
-            console.log('Updated player stats from battle result:', playerStats);
           }
           break;
         }
       }
     }
-    console.log('Battle result processed successfully:', this.BattleStats[arenaId]);
-    console.log('Duration:', this.BattleStats[arenaId].duration);
-    console.log('Winner:', this.BattleStats[arenaId].win);
-    console.log('Before clearing cache and saving to server');
 
     this.clearBestWorstCache(); 
     await Utils.getRandomDelay();
     
     if (this.isExistsPlayerRecord()) {
-      console.log('About to call serverDataDebounced');
       this.serverDataDebounced();
     }
   }
